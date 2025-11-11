@@ -20,7 +20,8 @@ const Index = () => {
   }, []);
 
   const handleConnect = () => {
-    const clientId = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
+    // Replace with your Spotify Client ID from the dashboard
+    const clientId = "YOUR_SPOTIFY_CLIENT_ID_HERE";
     const redirectUri = `${window.location.origin}/`;
     const scopes = "user-top-read";
 
