@@ -59,23 +59,33 @@ const WeeklyListening = ({
 
       // Add snapshot image if available
       if (snapshotImageUrl) {
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        await new Promise((resolve, reject) => {
-          img.onload = resolve;
-          img.onerror = reject;
-          img.src = snapshotImageUrl;
-        });
-        
-        // Draw image centered with some padding
-        const imgSize = 800;
-        const imgX = (1080 - imgSize) / 2;
-        const imgY = 400;
-        ctx.drawImage(img, imgX, imgY, imgSize, imgSize);
-        
-        // Add color tint
-        ctx.fillStyle = vibeColor + '40';
-        ctx.fillRect(imgX, imgY, imgSize, imgSize);
+        try {
+          // Fetch the image as a blob to avoid CORS issues
+          const imageResponse = await fetch(snapshotImageUrl);
+          const imageBlob = await imageResponse.blob();
+          const imageUrl = URL.createObjectURL(imageBlob);
+          
+          const img = new Image();
+          await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+            img.src = imageUrl;
+          });
+          
+          // Draw image centered with some padding
+          const imgSize = 800;
+          const imgX = (1080 - imgSize) / 2;
+          const imgY = 400;
+          ctx.drawImage(img, imgX, imgY, imgSize, imgSize);
+          
+          // Add color tint overlay
+          ctx.fillStyle = vibeColor + '40';
+          ctx.fillRect(imgX, imgY, imgSize, imgSize);
+          
+          URL.revokeObjectURL(imageUrl);
+        } catch (error) {
+          console.error('Error loading snapshot image:', error);
+        }
       }
 
       // Add caption text
