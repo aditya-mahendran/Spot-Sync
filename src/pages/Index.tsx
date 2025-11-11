@@ -10,33 +10,27 @@ const Index = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
+    // Check if we're returning from Spotify OAuth
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get("code");
+
+    if (code) {
+      // We have a code, exchange it for token
+      exchangeCodeForToken(code);
+      return;
+    }
+
+    // Check if we already have a token
     const token = localStorage.getItem("spotify_access_token");
     if (token) {
       setAccessToken(token);
       handleDataFetch(token);
+    } else {
+      // No code and no token, go to landing
+      navigate("/landing");
     }
   }, []);
 
-  const handleConnect = () => {
-    const clientId = "9ec86b7567a34af28e84a6f72e7590a1";
-    const redirectUri = `${window.location.origin}/`;
-    const scopes = "user-top-read user-read-recently-played";
-
-    const authUrl = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=code&redirect_uri=${encodeURIComponent(
-      redirectUri,
-    )}&scope=${encodeURIComponent(scopes)}`;
-
-    const popup = window.open(authUrl, "Spotify Login", "width=500,height=700,left=100,top=100");
-
-    window.addEventListener("message", async (event) => {
-      if (event.origin !== window.location.origin) return;
-
-      if (event.data.type === "spotify-auth" && event.data.code) {
-        popup?.close();
-        await exchangeCodeForToken(event.data.code);
-      }
-    });
-  };
 
   const exchangeCodeForToken = async (code: string) => {
     setIsLoading(true);
@@ -103,28 +97,9 @@ const Index = () => {
     }
   };
 
-  // Handle OAuth callback
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get("code");
-
-    if (code && !accessToken) {
-      // Send code to parent window if in popup
-      if (window.opener) {
-        window.opener.postMessage({ type: "spotify-auth", code }, window.location.origin);
-        window.close();
-      } else {
-        // Handle callback in same window
-        exchangeCodeForToken(code);
-        // Clean URL
-        window.history.replaceState({}, document.title, "/");
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    navigate("/landing");
-  }, []);
+  if (isLoading) {
+    return null; // Analyzing page will show
+  }
 
   return null;
 };

@@ -1,12 +1,17 @@
 import { Button } from "@/components/ui/button";
 import { Music, Sparkles } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 
 const Landing = () => {
-  const navigate = useNavigate();
-
   const handleConnect = () => {
-    navigate("/connect");
+    const clientId = "9ec86b7567a34af28e84a6f72e7590a1";
+    const redirectUri = `${window.location.origin}/`;
+    const scopes = "user-top-read user-read-recently-played";
+
+    const authUrl = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=code&redirect_uri=${encodeURIComponent(
+      redirectUri,
+    )}&scope=${encodeURIComponent(scopes)}`;
+
+    window.location.href = authUrl;
   };
 
   return (
