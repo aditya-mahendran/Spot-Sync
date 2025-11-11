@@ -38,15 +38,27 @@ All colors MUST be HSL.
 
     --radius: 1rem;
 
-    /* Spotify-specific design tokens */
-    --spotify-green: 141 73% 42%;
-    --spotify-black: 0 0% 7%;
-    --spotify-dark-grey: 0 0% 11%;
-    --spotify-light-grey: 0 0% 20%;
+    /* Space-ethereal design tokens */
+    --cosmic-purple: 270 60% 50%;
+    --cosmic-blue: 220 80% 55%;
+    --cosmic-pink: 320 70% 60%;
+    --neon-green: 141 73% 42%;
+    --deep-space: 0 0% 7%;
+    --nebula-glow: 270 60% 50%;
 
-    --gradient-overlay: linear-gradient(180deg, rgba(18, 18, 18, 0) 0%, rgba(18, 18, 18, 0.9) 100%);
-    --shadow-glow: 0 8px 32px hsl(var(--spotify-green) / 0.3);
+    /* Gradients */
+    --gradient-cosmic: linear-gradient(135deg, hsl(270 60% 50% / 0.2) 0%, hsl(220 80% 55% / 0.2) 50%, hsl(320 70% 60% / 0.2) 100%);
+    --gradient-persona: linear-gradient(135deg, hsl(270 60% 50%) 0%, hsl(320 70% 60%) 100%);
+    --gradient-overlay: linear-gradient(180deg, rgba(18, 18, 18, 0) 0%, rgba(18, 18, 18, 0.95) 100%);
+    
+    /* Glows and shadows */
+    --glow-primary: 0 0 40px hsl(var(--neon-green) / 0.4);
+    --glow-cosmic: 0 0 60px hsl(var(--cosmic-purple) / 0.3);
+    --shadow-elevated: 0 20px 60px -15px hsl(var(--cosmic-purple) / 0.4);
+    
+    /* Transitions */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
   }
 }
 

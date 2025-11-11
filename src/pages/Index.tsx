@@ -5,6 +5,7 @@ import { TrackList } from "@/components/TrackList";
 import { ListeningTimeChart } from "@/components/ListeningTimeChart";
 import { MusicPersonality } from "@/components/MusicPersonality";
 import MoodBoard from "@/components/MoodBoard";
+import { LoadingInterlude } from "@/components/LoadingInterlude";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -15,6 +16,7 @@ const Index = () => {
   const [personality, setPersonality] = useState<string>("");
   const [moodBoardImages, setMoodBoardImages] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [showLoadingInterlude, setShowLoadingInterlude] = useState(false);
   const [isGeneratingPersonality, setIsGeneratingPersonality] = useState(false);
   const [isGeneratingMoodBoard, setIsGeneratingMoodBoard] = useState(false);
 
@@ -53,6 +55,7 @@ const Index = () => {
 
   const exchangeCodeForToken = async (code: string) => {
     setIsLoading(true);
+    setShowLoadingInterlude(true);
     try {
       const { data, error } = await supabase.functions.invoke("spotify-auth", {
         body: { code, redirectUri: `${window.location.origin}/` },
@@ -63,12 +66,20 @@ const Index = () => {
       if (data.access_token) {
         setAccessToken(data.access_token);
         localStorage.setItem("spotify_access_token", data.access_token);
-        await fetchMusicData(data.access_token);
+        
+        // Minimum 2s loading interlude for effect
+        await Promise.all([
+          fetchMusicData(data.access_token),
+          new Promise(resolve => setTimeout(resolve, 2000))
+        ]);
+        
+        setShowLoadingInterlude(false);
         toast.success("Connected to Spotify!");
       }
     } catch (error: any) {
       console.error("Error exchanging code:", error);
       toast.error("Failed to connect to Spotify");
+      setShowLoadingInterlude(false);
     } finally {
       setIsLoading(false);
     }
@@ -179,24 +190,38 @@ const Index = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
-      <div className="w-full max-w-4xl">
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary/10 mb-6">
-            <Music className="w-10 h-10 text-primary" />
+    <>
+      {showLoadingInterlude && <LoadingInterlude />}
+      
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 relative overflow-hidden">
+        {/* Cosmic background effect */}
+        <div className="absolute inset-0 bg-gradient-to-br from-cosmic-purple/5 via-background to-cosmic-pink/5 pointer-events-none" />
+        
+        <div className="w-full max-w-4xl relative z-10">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-cosmic-purple/20 mb-6 shadow-[var(--glow-primary)]">
+              <Music className="w-10 h-10 text-primary" />
+            </div>
+            <h1 className="text-6xl font-bold mb-4 bg-gradient-to-r from-primary via-cosmic-purple to-cosmic-pink bg-clip-text text-transparent">
+              Spot-Sync
+            </h1>
+            <p className="text-muted-foreground text-lg mb-2">
+              Discover your music personality through AI-powered insights
+            </p>
+            <p className="text-xs text-muted-foreground/60">
+              Read-only access. We don't post, DM your ex, or mess with your playlists.
+            </p>
           </div>
-          <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-            Your Music Insights
-          </h1>
-          <p className="text-muted-foreground text-lg">Connect your Spotify account to see your listening patterns and top tracks</p>
-        </div>
 
         {!accessToken ? (
           <div className="flex justify-center">
             <Button
               onClick={handleConnect}
               disabled={isLoading}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-6 text-lg font-semibold rounded-full shadow-[0_8px_32px_hsl(var(--primary)/0.3)] hover:shadow-[0_8px_40px_hsl(var(--primary)/0.4)] transition-all duration-300 hover:scale-105"
+              className="bg-gradient-to-r from-primary to-neon-green hover:from-primary/90 hover:to-neon-green/90 text-primary-foreground px-8 py-6 text-lg font-semibold rounded-full transition-all duration-300 hover:scale-105"
+              style={{ 
+                boxShadow: 'var(--glow-primary)',
+              }}
             >
               <Music className="mr-2 h-5 w-5" />
               Connect to Spotify
@@ -210,8 +235,9 @@ const Index = () => {
             <TrackList tracks={topTracks} isLoading={isLoading} />
           </div>
         )}
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 

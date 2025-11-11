@@ -47,12 +47,11 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        spotify: {
-          green: "hsl(var(--spotify-green))",
-          black: "hsl(var(--spotify-black))",
-          darkGrey: "hsl(var(--spotify-dark-grey))",
-          lightGrey: "hsl(var(--spotify-light-grey))",
-        },
+        "cosmic-purple": "hsl(var(--cosmic-purple))",
+        "cosmic-blue": "hsl(var(--cosmic-blue))",
+        "cosmic-pink": "hsl(var(--cosmic-pink))",
+        "neon-green": "hsl(var(--neon-green))",
+        "deep-space": "hsl(var(--deep-space))",
       },
       borderRadius: {
         lg: "var(--radius)",
