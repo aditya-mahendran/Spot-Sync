@@ -1,1 +1,7 @@
 project_id = "mrpayprqketzzdrolmcj"
+
+[functions.spotify-auth]
+verify_jwt = false
+
+[functions.generate-music-personality]
+verify_jwt = false

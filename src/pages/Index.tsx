@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Music } from "lucide-react";
 import { TrackList } from "@/components/TrackList";
 import { ListeningTimeChart } from "@/components/ListeningTimeChart";
+import { MusicPersonality } from "@/components/MusicPersonality";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -10,7 +11,9 @@ const Index = () => {
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [topTracks, setTopTracks] = useState<any[]>([]);
   const [recentTracks, setRecentTracks] = useState<any[]>([]);
+  const [personality, setPersonality] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isGeneratingPersonality, setIsGeneratingPersonality] = useState(false);
 
   useEffect(() => {
     // Check if we have a token in localStorage
@@ -96,6 +99,9 @@ const Index = () => {
 
       setTopTracks(topTracksData.items);
       setRecentTracks(recentTracksData.items);
+
+      // Generate personality after fetching data
+      await generatePersonality(topTracksData.items, recentTracksData.items);
     } catch (error: any) {
       console.error("Error fetching music data:", error);
       toast.error("Failed to fetch your music data");
@@ -104,6 +110,26 @@ const Index = () => {
       setAccessToken(null);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const generatePersonality = async (topTracks: any[], recentTracks: any[]) => {
+    setIsGeneratingPersonality(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-music-personality", {
+        body: { topTracks, recentTracks },
+      });
+
+      if (error) throw error;
+
+      if (data?.personality) {
+        setPersonality(data.personality);
+      }
+    } catch (error: any) {
+      console.error("Error generating personality:", error);
+      toast.error("Failed to generate personality");
+    } finally {
+      setIsGeneratingPersonality(false);
     }
   };
 
@@ -152,6 +178,7 @@ const Index = () => {
           </div>
         ) : (
           <div className="space-y-8">
+            <MusicPersonality personality={personality} isLoading={isGeneratingPersonality} />
             <ListeningTimeChart recentTracks={recentTracks} />
             <TrackList tracks={topTracks} isLoading={isLoading} />
           </div>
