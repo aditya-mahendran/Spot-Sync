@@ -8,6 +8,9 @@ import MoodBoard from "@/components/MoodBoard";
 import { LoadingInterlude } from "@/components/LoadingInterlude";
 import { RipplingStars } from "@/components/RipplingStars";
 import { VibeSpectrum } from "@/components/VibeSpectrum";
+import Snapshots from "@/components/Snapshots";
+import MusicPencilDrawings from "@/components/MusicPencilDrawings";
+import DrawingAnimation from "@/components/DrawingAnimation";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -24,6 +27,7 @@ const Index = () => {
   const [showLoadingInterlude, setShowLoadingInterlude] = useState(false);
   const [isGeneratingPersonality, setIsGeneratingPersonality] = useState(false);
   const [isGeneratingMoodBoard, setIsGeneratingMoodBoard] = useState(false);
+  const [snapshots, setSnapshots] = useState<any[]>([]);
 
   useEffect(() => {
     // Check if we have a token in localStorage
@@ -31,6 +35,12 @@ const Index = () => {
     if (token) {
       setAccessToken(token);
       fetchMusicData(token);
+    }
+    
+    // Load snapshots from localStorage
+    const savedSnapshots = localStorage.getItem("music_snapshots");
+    if (savedSnapshots) {
+      setSnapshots(JSON.parse(savedSnapshots));
     }
   }, []);
 
@@ -216,10 +226,45 @@ const Index = () => {
     }
   }, []);
 
+  const handleCommitSnapshot = () => {
+    if (moodBoardImages.length === 0) {
+      toast.error("No mood board images available");
+      return;
+    }
+
+    // Get the first mood board image
+    const firstImage = moodBoardImages[0];
+    
+    // Calculate tint based on energy level
+    let tintFilter = '';
+    if (energyLevel > 70) {
+      tintFilter = 'hue-rotate(20deg) saturate(1.5)'; // Orange/warm tint
+    } else if (energyLevel > 40) {
+      tintFilter = 'hue-rotate(0deg)'; // Neutral
+    } else {
+      tintFilter = 'hue-rotate(240deg) saturate(1.2)'; // Indigo/cool tint
+    }
+
+    const newSnapshot = {
+      id: Date.now().toString(),
+      imageUrl: firstImage.url,
+      tint: tintFilter,
+      date: new Date().toISOString(),
+    };
+
+    const updatedSnapshots = [...snapshots, newSnapshot];
+    setSnapshots(updatedSnapshots);
+    localStorage.setItem("music_snapshots", JSON.stringify(updatedSnapshots));
+    
+    toast.success("Snapshot committed! 📸");
+  };
+
   return (
     <>
       {showLoadingInterlude && <LoadingInterlude />}
       <RipplingStars />
+      <MusicPencilDrawings />
+      {!accessToken && <DrawingAnimation />}
       
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 relative overflow-hidden">
         {/* Cosmic background effect */}
@@ -298,6 +343,11 @@ const Index = () => {
             {moodBoardImages.length > 0 && <MoodBoard images={moodBoardImages} />}
             <ListeningTimeChart recentTracks={recentTracks} />
             <TrackList tracks={topTracks} isLoading={isLoading} />
+            <Snapshots 
+              snapshots={snapshots} 
+              onCommitSnapshot={handleCommitSnapshot}
+              hasImages={moodBoardImages.length > 0}
+            />
           </div>
         )}
         </div>
