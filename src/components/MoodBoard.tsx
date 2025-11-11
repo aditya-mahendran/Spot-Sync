@@ -25,9 +25,9 @@ const MoodBoard = ({ images }: MoodBoardProps) => {
       <p className="text-muted-foreground mb-4">
         Visual vibes inspired by your listening habits
       </p>
-      <div className="grid grid-cols-4 gap-2 sm:gap-3">
+      <div className="grid grid-cols-4 gap-0">
         {images.slice(0, 12).map((image, index) => (
-          <div key={index} className="overflow-hidden rounded-md aspect-square">
+          <div key={index} className="overflow-hidden aspect-square">
             <img
               src={image.url}
               alt={image.description}

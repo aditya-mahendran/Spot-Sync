@@ -52,11 +52,11 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: "You are a music analyst. Based on music data, output ONLY 4 specific visual search terms separated by commas. Each term should be 1-3 words describing a mood, aesthetic, or visual theme. Examples: 'neon lights', 'ocean sunset', 'urban street', 'forest mist'. Be creative and match the music vibe.",
+            content: "You are a music analyst. Based on music data, output ONLY 12 specific visual search terms separated by commas. Each term should be 1-3 words describing a mood, aesthetic, or visual theme. Examples: 'neon lights', 'ocean sunset', 'urban street', 'forest mist'. Be creative and match the music vibe.",
           },
           {
             role: "user",
-            content: `Based on this music data, output exactly 4 visual search terms:\n\n${musicDataSummary}`,
+            content: `Based on this music data, output exactly 12 visual search terms:\n\n${musicDataSummary}`,
           },
         ],
       }),
@@ -78,7 +78,7 @@ serve(async (req) => {
 
     const aiData = await aiResponse.json();
     const searchTermsText = aiData.choices?.[0]?.message?.content || "";
-    const searchTerms = searchTermsText.split(",").map((term: string) => term.trim()).slice(0, 4);
+    const searchTerms = searchTermsText.split(",").map((term: string) => term.trim()).slice(0, 12);
 
     console.log("Generated search terms:", searchTerms);
 
