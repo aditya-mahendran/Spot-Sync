@@ -394,7 +394,7 @@ const Index = () => {
               isLoading={isGeneratingPersonality} 
               vibeColor={vibeColor}
             />
-            {moodBoardImages.length > 0 && <MoodBoard images={moodBoardImages} />}
+            {moodBoardImages.length > 0 && <MoodBoard images={moodBoardImages} vibeColor={vibeColor} />}
             <ListeningTimeChart recentTracks={recentTracks} />
             <WeeklyListening
               description={weeklyDescription}

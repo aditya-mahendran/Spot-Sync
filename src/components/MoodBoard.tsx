@@ -12,9 +12,10 @@ interface MoodBoardImage {
 
 interface MoodBoardProps {
   images: MoodBoardImage[];
+  vibeColor: string;
 }
 
-const MoodBoard = ({ images }: MoodBoardProps) => {
+const MoodBoard = ({ images, vibeColor }: MoodBoardProps) => {
   if (!images || images.length === 0) {
     return null;
   }
@@ -25,17 +26,25 @@ const MoodBoard = ({ images }: MoodBoardProps) => {
       <p className="text-muted-foreground mb-4">
         Visual vibes inspired by your listening habits
       </p>
-      <div className="grid grid-cols-4 gap-0">
-        {images.slice(0, 12).map((image, index) => (
-          <div key={index} className="overflow-hidden aspect-square">
-            <img
-              src={image.url}
-              alt={image.description}
-              className="w-full h-full object-cover"
-              loading="lazy"
-            />
-          </div>
-        ))}
+      <div className="relative">
+        <div className="grid grid-cols-4 gap-0">
+          {images.slice(0, 12).map((image, index) => (
+            <div key={index} className="overflow-hidden aspect-square">
+              <img
+                src={image.url}
+                alt={image.description}
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
+            </div>
+          ))}
+        </div>
+        <div 
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: `linear-gradient(135deg, ${vibeColor}20, ${vibeColor}40, ${vibeColor}20)`
+          }}
+        />
       </div>
     </Card>
   );
