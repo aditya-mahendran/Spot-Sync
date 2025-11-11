@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.generate-music-personality]
 verify_jwt = false
+
+[functions.generate-mood-board]
+verify_jwt = false

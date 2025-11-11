@@ -4,6 +4,7 @@ import { Music } from "lucide-react";
 import { TrackList } from "@/components/TrackList";
 import { ListeningTimeChart } from "@/components/ListeningTimeChart";
 import { MusicPersonality } from "@/components/MusicPersonality";
+import MoodBoard from "@/components/MoodBoard";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -12,8 +13,10 @@ const Index = () => {
   const [topTracks, setTopTracks] = useState<any[]>([]);
   const [recentTracks, setRecentTracks] = useState<any[]>([]);
   const [personality, setPersonality] = useState<string>("");
+  const [moodBoardImages, setMoodBoardImages] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isGeneratingPersonality, setIsGeneratingPersonality] = useState(false);
+  const [isGeneratingMoodBoard, setIsGeneratingMoodBoard] = useState(false);
 
   useEffect(() => {
     // Check if we have a token in localStorage
@@ -100,8 +103,11 @@ const Index = () => {
       setTopTracks(topTracksData.items);
       setRecentTracks(recentTracksData.items);
 
-      // Generate personality after fetching data
-      await generatePersonality(topTracksData.items, recentTracksData.items);
+      // Generate personality and mood board after fetching data
+      await Promise.all([
+        generatePersonality(topTracksData.items, recentTracksData.items),
+        generateMoodBoard(topTracksData.items, recentTracksData.items)
+      ]);
     } catch (error: any) {
       console.error("Error fetching music data:", error);
       toast.error("Failed to fetch your music data");
@@ -130,6 +136,26 @@ const Index = () => {
       toast.error("Failed to generate personality");
     } finally {
       setIsGeneratingPersonality(false);
+    }
+  };
+
+  const generateMoodBoard = async (topTracks: any[], recentTracks: any[]) => {
+    setIsGeneratingMoodBoard(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-mood-board", {
+        body: { topTracks, recentTracks },
+      });
+
+      if (error) throw error;
+
+      if (data?.images) {
+        setMoodBoardImages(data.images);
+      }
+    } catch (error: any) {
+      console.error("Error generating mood board:", error);
+      toast.error("Failed to generate mood board");
+    } finally {
+      setIsGeneratingMoodBoard(false);
     }
   };
 
@@ -179,6 +205,7 @@ const Index = () => {
         ) : (
           <div className="space-y-8">
             <MusicPersonality personality={personality} isLoading={isGeneratingPersonality} />
+            {moodBoardImages.length > 0 && <MoodBoard images={moodBoardImages} />}
             <ListeningTimeChart recentTracks={recentTracks} />
             <TrackList tracks={topTracks} isLoading={isLoading} />
           </div>
