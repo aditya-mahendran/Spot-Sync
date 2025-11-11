@@ -8,3 +8,7 @@ verify_jwt = false
 
 [functions.generate-mood-board]
 verify_jwt = false
+
+[functions.generate-weekly-summary]
+verify_jwt = false
+

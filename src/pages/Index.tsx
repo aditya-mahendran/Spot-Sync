@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Music } from "lucide-react";
-import { TrackList } from "@/components/TrackList";
 import { ListeningTimeChart } from "@/components/ListeningTimeChart";
 import { MusicPersonality } from "@/components/MusicPersonality";
 import MoodBoard from "@/components/MoodBoard";
@@ -11,6 +10,7 @@ import { VibeSpectrum } from "@/components/VibeSpectrum";
 import Snapshots from "@/components/Snapshots";
 import MusicPencilDrawings from "@/components/MusicPencilDrawings";
 import DrawingAnimation from "@/components/DrawingAnimation";
+import WeeklyListening from "@/components/WeeklyListening";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -28,6 +28,9 @@ const Index = () => {
   const [isGeneratingPersonality, setIsGeneratingPersonality] = useState(false);
   const [isGeneratingMoodBoard, setIsGeneratingMoodBoard] = useState(false);
   const [snapshots, setSnapshots] = useState<any[]>([]);
+  const [weeklyDescription, setWeeklyDescription] = useState<string>("");
+  const [weeklyVibeWord, setWeeklyVibeWord] = useState<string>("");
+  const [isGeneratingWeekly, setIsGeneratingWeekly] = useState(false);
 
   useEffect(() => {
     // Check if we have a token in localStorage
@@ -147,10 +150,11 @@ const Index = () => {
       setTopTracks(topTracksData.items.slice(0, 5)); // Display only 5
       setRecentTracks(recentTracksData.items);
 
-      // Generate personality and mood board after fetching data
+      // Generate personality, mood board, and weekly summary after fetching data
       await Promise.all([
         generatePersonality(topTracksData.items, recentTracksData.items),
         generateMoodBoard(topTracksData.items, recentTracksData.items),
+        generateWeeklySummary(recentTracksData.items),
         new Promise(resolve => setTimeout(resolve, 2000)) // Minimum loading time
       ]);
       
@@ -207,6 +211,27 @@ const Index = () => {
     }
   };
 
+  const generateWeeklySummary = async (recentTracks: any[]) => {
+    setIsGeneratingWeekly(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-weekly-summary", {
+        body: { recentTracks, energyLevel },
+      });
+
+      if (error) throw error;
+
+      if (data?.description && data?.vibeWord) {
+        setWeeklyDescription(data.description);
+        setWeeklyVibeWord(data.vibeWord);
+      }
+    } catch (error: any) {
+      console.error("Error generating weekly summary:", error);
+      toast.error("Failed to generate weekly summary");
+    } finally {
+      setIsGeneratingWeekly(false);
+    }
+  };
+
   // Handle OAuth callback
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -234,21 +259,11 @@ const Index = () => {
 
     // Get the first mood board image
     const firstImage = moodBoardImages[0];
-    
-    // Calculate tint based on energy level
-    let tintFilter = '';
-    if (energyLevel > 70) {
-      tintFilter = 'hue-rotate(20deg) saturate(1.5)'; // Orange/warm tint
-    } else if (energyLevel > 40) {
-      tintFilter = 'hue-rotate(0deg)'; // Neutral
-    } else {
-      tintFilter = 'hue-rotate(240deg) saturate(1.2)'; // Indigo/cool tint
-    }
 
     const newSnapshot = {
       id: Date.now().toString(),
       imageUrl: firstImage.url,
-      tint: tintFilter,
+      tint: vibeColor,
       date: new Date().toISOString(),
     };
 
@@ -259,14 +274,23 @@ const Index = () => {
     toast.success("Snapshot committed! 📸");
   };
 
+  const handleDeleteSnapshot = (id: string) => {
+    const updatedSnapshots = snapshots.filter(s => s.id !== id);
+    setSnapshots(updatedSnapshots);
+    localStorage.setItem("music_snapshots", JSON.stringify(updatedSnapshots));
+    toast.success("Snapshot deleted");
+  };
+
   return (
     <>
       {showLoadingInterlude && <LoadingInterlude />}
-      <RipplingStars />
-      <MusicPencilDrawings />
-      {!accessToken && <DrawingAnimation />}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <RipplingStars />
+        <MusicPencilDrawings />
+        {!accessToken && <DrawingAnimation />}
+      </div>
       
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 relative overflow-hidden">
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 relative z-10">
         {/* Cosmic background effect */}
         <div className="absolute inset-0 bg-gradient-to-br from-cosmic-purple/5 via-background to-cosmic-pink/5 pointer-events-none" />
         
@@ -342,10 +366,16 @@ const Index = () => {
             />
             {moodBoardImages.length > 0 && <MoodBoard images={moodBoardImages} />}
             <ListeningTimeChart recentTracks={recentTracks} />
-            <TrackList tracks={topTracks} isLoading={isLoading} />
+            <WeeklyListening
+              description={weeklyDescription}
+              vibeWord={weeklyVibeWord}
+              vibeColor={vibeColor}
+              isLoading={isGeneratingWeekly}
+            />
             <Snapshots 
               snapshots={snapshots} 
               onCommitSnapshot={handleCommitSnapshot}
+              onDeleteSnapshot={handleDeleteSnapshot}
               hasImages={moodBoardImages.length > 0}
             />
           </div>
