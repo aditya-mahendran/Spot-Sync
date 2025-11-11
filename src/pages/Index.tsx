@@ -2,12 +2,14 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Music } from "lucide-react";
 import { TrackList } from "@/components/TrackList";
+import { ListeningTimeChart } from "@/components/ListeningTimeChart";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const Index = () => {
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [topTracks, setTopTracks] = useState<any[]>([]);
+  const [recentTracks, setRecentTracks] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -15,7 +17,7 @@ const Index = () => {
     const token = localStorage.getItem("spotify_access_token");
     if (token) {
       setAccessToken(token);
-      fetchTopTracks(token);
+      fetchMusicData(token);
     }
   }, []);
 
@@ -23,7 +25,7 @@ const Index = () => {
     // Replace with your Spotify Client ID from the dashboard
     const clientId = "9ec86b7567a34af28e84a6f72e7590a1";
     const redirectUri = `${window.location.origin}/`;
-    const scopes = "user-top-read";
+    const scopes = "user-top-read user-read-recently-played";
 
     const authUrl = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=code&redirect_uri=${encodeURIComponent(
       redirectUri,
@@ -55,7 +57,7 @@ const Index = () => {
       if (data.access_token) {
         setAccessToken(data.access_token);
         localStorage.setItem("spotify_access_token", data.access_token);
-        await fetchTopTracks(data.access_token);
+        await fetchMusicData(data.access_token);
         toast.success("Connected to Spotify!");
       }
     } catch (error: any) {
@@ -66,24 +68,37 @@ const Index = () => {
     }
   };
 
-  const fetchTopTracks = async (token: string) => {
+  const fetchMusicData = async (token: string) => {
     setIsLoading(true);
     try {
-      const response = await fetch("https://api.spotify.com/v1/me/top/tracks?limit=5&time_range=medium_term", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      // Fetch top tracks
+      const topTracksResponse = await fetch(
+        "https://api.spotify.com/v1/me/top/tracks?limit=5&time_range=medium_term",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch top tracks");
+      // Fetch recently played tracks for listening pattern analysis
+      const recentTracksResponse = await fetch(
+        "https://api.spotify.com/v1/me/player/recently-played?limit=50",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (!topTracksResponse.ok || !recentTracksResponse.ok) {
+        throw new Error("Failed to fetch music data");
       }
 
-      const data = await response.json();
-      setTopTracks(data.items);
+      const topTracksData = await topTracksResponse.json();
+      const recentTracksData = await recentTracksResponse.json();
+
+      setTopTracks(topTracksData.items);
+      setRecentTracks(recentTracksData.items);
     } catch (error: any) {
-      console.error("Error fetching top tracks:", error);
-      toast.error("Failed to fetch your top tracks");
+      console.error("Error fetching music data:", error);
+      toast.error("Failed to fetch your music data");
       // Clear invalid token
       localStorage.removeItem("spotify_access_token");
       setAccessToken(null);
@@ -119,9 +134,9 @@ const Index = () => {
             <Music className="w-10 h-10 text-primary" />
           </div>
           <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-            Spotify Top Tracks
+            Your Music Insights
           </h1>
-          <p className="text-muted-foreground text-lg">Connect your Spotify account to see your most played songs</p>
+          <p className="text-muted-foreground text-lg">Connect your Spotify account to see your listening patterns and top tracks</p>
         </div>
 
         {!accessToken ? (
@@ -136,7 +151,10 @@ const Index = () => {
             </Button>
           </div>
         ) : (
-          <TrackList tracks={topTracks} isLoading={isLoading} />
+          <div className="space-y-8">
+            <ListeningTimeChart recentTracks={recentTracks} />
+            <TrackList tracks={topTracks} isLoading={isLoading} />
+          </div>
         )}
       </div>
     </div>
