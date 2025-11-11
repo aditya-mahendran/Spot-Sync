@@ -21,16 +21,20 @@ const Index = () => {
 
   const handleConnect = () => {
     // Replace with your Spotify Client ID from the dashboard
-    const clientId = "9ec86b7567a34af28e84a6f72e7590a1";
+    const clientId = "YOUR_SPOTIFY_CLIENT_ID_HERE";
     const redirectUri = `${window.location.origin}/`;
     const scopes = "user-top-read";
 
     const authUrl = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=code&redirect_uri=${encodeURIComponent(
-      redirectUri,
+      redirectUri
     )}&scope=${encodeURIComponent(scopes)}`;
 
     // Open popup window
-    const popup = window.open(authUrl, "Spotify Login", "width=500,height=700,left=100,top=100");
+    const popup = window.open(
+      authUrl,
+      "Spotify Login",
+      "width=500,height=700,left=100,top=100"
+    );
 
     // Listen for the callback
     window.addEventListener("message", async (event) => {
@@ -69,11 +73,14 @@ const Index = () => {
   const fetchTopTracks = async (token: string) => {
     setIsLoading(true);
     try {
-      const response = await fetch("https://api.spotify.com/v1/me/top/tracks?limit=5&time_range=medium_term", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await fetch(
+        "https://api.spotify.com/v1/me/top/tracks?limit=5&time_range=medium_term",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Failed to fetch top tracks");
@@ -100,7 +107,10 @@ const Index = () => {
     if (code && !accessToken) {
       // Send code to parent window if in popup
       if (window.opener) {
-        window.opener.postMessage({ type: "spotify-auth", code }, window.location.origin);
+        window.opener.postMessage(
+          { type: "spotify-auth", code },
+          window.location.origin
+        );
         window.close();
       } else {
         // Handle callback in same window
@@ -121,7 +131,9 @@ const Index = () => {
           <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
             Spotify Top Tracks
           </h1>
-          <p className="text-muted-foreground text-lg">Connect your Spotify account to see your most played songs</p>
+          <p className="text-muted-foreground text-lg">
+            Connect your Spotify account to see your most played songs
+          </p>
         </div>
 
         {!accessToken ? (
