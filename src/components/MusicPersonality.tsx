@@ -5,9 +5,10 @@ import { motion } from "framer-motion";
 interface MusicPersonalityProps {
   personality: string;
   isLoading: boolean;
+  vibeColor?: string;
 }
 
-export const MusicPersonality = ({ personality, isLoading }: MusicPersonalityProps) => {
+export const MusicPersonality = ({ personality, isLoading, vibeColor }: MusicPersonalityProps) => {
   if (isLoading) {
     return (
       <Card className="w-full bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
@@ -74,9 +75,9 @@ export const MusicPersonality = ({ personality, isLoading }: MusicPersonalityPro
               animate={{ rotate: [0, 360] }}
               transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
             >
-              <Sparkles className="w-5 h-5 text-primary" />
+              <Sparkles className="w-5 h-5" style={{ color: vibeColor || 'hsl(var(--primary))' }} />
             </motion.div>
-            Your Music Personality
+            <span style={{ color: vibeColor || 'inherit' }}>Your Music Personality</span>
           </CardTitle>
           <CardDescription>According to your listening habits</CardDescription>
         </CardHeader>
@@ -90,6 +91,7 @@ export const MusicPersonality = ({ personality, isLoading }: MusicPersonalityPro
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.2, duration: 0.4 }}
                 className="text-lg font-medium leading-relaxed"
+                style={{ color: vibeColor || 'inherit' }}
               >
                 {line.replace(/^\d+\.\s*/, "").trim()}
               </motion.p>

@@ -7,6 +7,7 @@ import { MusicPersonality } from "@/components/MusicPersonality";
 import MoodBoard from "@/components/MoodBoard";
 import { LoadingInterlude } from "@/components/LoadingInterlude";
 import { RipplingStars } from "@/components/RipplingStars";
+import { VibeSpectrum } from "@/components/VibeSpectrum";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -17,6 +18,8 @@ const Index = () => {
   const [recentTracks, setRecentTracks] = useState<any[]>([]);
   const [personality, setPersonality] = useState<string>("");
   const [moodBoardImages, setMoodBoardImages] = useState<any[]>([]);
+  const [energyLevel, setEnergyLevel] = useState<number>(50);
+  const [vibeColor, setVibeColor] = useState<string>("hsl(240, 57%, 50%)");
   const [isLoading, setIsLoading] = useState(false);
   const [showLoadingInterlude, setShowLoadingInterlude] = useState(false);
   const [isGeneratingPersonality, setIsGeneratingPersonality] = useState(false);
@@ -93,7 +96,7 @@ const Index = () => {
     try {
       // Fetch top tracks
       const topTracksResponse = await fetch(
-        "https://api.spotify.com/v1/me/top/tracks?limit=5&time_range=medium_term",
+        "https://api.spotify.com/v1/me/top/tracks?limit=20&time_range=medium_term",
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -114,7 +117,24 @@ const Index = () => {
       const topTracksData = await topTracksResponse.json();
       const recentTracksData = await recentTracksResponse.json();
 
-      setTopTracks(topTracksData.items);
+      // Fetch audio features for energy calculation
+      const trackIds = topTracksData.items.map((t: any) => t.id).join(",");
+      const audioFeaturesResponse = await fetch(
+        `https://api.spotify.com/v1/audio-features?ids=${trackIds}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (audioFeaturesResponse.ok) {
+        const audioFeaturesData = await audioFeaturesResponse.json();
+        const avgEnergy = audioFeaturesData.audio_features
+          .filter((f: any) => f !== null)
+          .reduce((sum: number, f: any) => sum + f.energy, 0) / audioFeaturesData.audio_features.length;
+        setEnergyLevel(avgEnergy * 100);
+      }
+
+      setTopTracks(topTracksData.items.slice(0, 5)); // Display only 5
       setRecentTracks(recentTracksData.items);
 
       // Generate personality and mood board after fetching data
@@ -206,7 +226,7 @@ const Index = () => {
         <div className="absolute inset-0 bg-gradient-to-br from-cosmic-purple/5 via-background to-cosmic-pink/5 pointer-events-none" />
         
         <div className="w-full max-w-4xl relative z-10">
-          <div className="text-center mb-12">
+          <div className="text-center mb-8">
             <motion.div 
               className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-cosmic-purple/20 mb-6"
               style={{ boxShadow: 'var(--glow-primary)' }}
@@ -247,6 +267,13 @@ const Index = () => {
             </p>
           </div>
 
+          {accessToken && (
+            <VibeSpectrum 
+              energyLevel={energyLevel} 
+              onColorChange={setVibeColor}
+            />
+          )}
+
         {!accessToken ? (
           <div className="flex justify-center">
             <Button
@@ -263,7 +290,11 @@ const Index = () => {
           </div>
         ) : (
           <div className="space-y-8">
-            <MusicPersonality personality={personality} isLoading={isGeneratingPersonality} />
+            <MusicPersonality 
+              personality={personality} 
+              isLoading={isGeneratingPersonality} 
+              vibeColor={vibeColor}
+            />
             {moodBoardImages.length > 0 && <MoodBoard images={moodBoardImages} />}
             <ListeningTimeChart recentTracks={recentTracks} />
             <TrackList tracks={topTracks} isLoading={isLoading} />
