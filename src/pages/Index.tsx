@@ -6,8 +6,10 @@ import { ListeningTimeChart } from "@/components/ListeningTimeChart";
 import { MusicPersonality } from "@/components/MusicPersonality";
 import MoodBoard from "@/components/MoodBoard";
 import { LoadingInterlude } from "@/components/LoadingInterlude";
+import { RipplingStars } from "@/components/RipplingStars";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { motion } from "framer-motion";
 
 const Index = () => {
   const [accessToken, setAccessToken] = useState<string | null>(null);
@@ -87,6 +89,7 @@ const Index = () => {
 
   const fetchMusicData = async (token: string) => {
     setIsLoading(true);
+    setShowLoadingInterlude(true);
     try {
       // Fetch top tracks
       const topTracksResponse = await fetch(
@@ -117,11 +120,15 @@ const Index = () => {
       // Generate personality and mood board after fetching data
       await Promise.all([
         generatePersonality(topTracksData.items, recentTracksData.items),
-        generateMoodBoard(topTracksData.items, recentTracksData.items)
+        generateMoodBoard(topTracksData.items, recentTracksData.items),
+        new Promise(resolve => setTimeout(resolve, 2000)) // Minimum loading time
       ]);
+      
+      setShowLoadingInterlude(false);
     } catch (error: any) {
       console.error("Error fetching music data:", error);
       toast.error("Failed to fetch your music data");
+      setShowLoadingInterlude(false);
       // Clear invalid token
       localStorage.removeItem("spotify_access_token");
       setAccessToken(null);
@@ -192,6 +199,7 @@ const Index = () => {
   return (
     <>
       {showLoadingInterlude && <LoadingInterlude />}
+      <RipplingStars />
       
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 relative overflow-hidden">
         {/* Cosmic background effect */}
@@ -199,12 +207,38 @@ const Index = () => {
         
         <div className="w-full max-w-4xl relative z-10">
           <div className="text-center mb-12">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-cosmic-purple/20 mb-6 shadow-[var(--glow-primary)]">
+            <motion.div 
+              className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-cosmic-purple/20 mb-6"
+              style={{ boxShadow: 'var(--glow-primary)' }}
+              animate={{ 
+                boxShadow: [
+                  'var(--glow-primary)',
+                  '0 0 60px hsl(var(--cosmic-purple) / 0.4)',
+                  'var(--glow-primary)'
+                ]
+              }}
+              transition={{ duration: 3, repeat: Infinity }}
+            >
               <Music className="w-10 h-10 text-primary" />
-            </div>
-            <h1 className="text-6xl font-bold mb-4 bg-gradient-to-r from-primary via-cosmic-purple to-cosmic-pink bg-clip-text text-transparent">
+            </motion.div>
+            
+            <motion.h1 
+              className="text-6xl font-bold mb-4 relative inline-block"
+              animate={{
+                backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
+              }}
+              transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
+              style={{
+                backgroundImage: 'linear-gradient(90deg, hsl(var(--primary)), hsl(var(--cosmic-purple)), hsl(var(--cosmic-pink)), hsl(var(--neon-green)), hsl(var(--primary)))',
+                backgroundSize: '200% 100%',
+                WebkitBackgroundClip: 'text',
+                backgroundClip: 'text',
+                color: 'transparent',
+              }}
+            >
               Spot-Sync
-            </h1>
+            </motion.h1>
+            
             <p className="text-muted-foreground text-lg mb-2">
               Discover your music personality through AI-powered insights
             </p>
