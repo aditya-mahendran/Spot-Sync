@@ -143,10 +143,17 @@ const Index = () => {
 
       if (audioFeaturesResponse.ok) {
         const audioFeaturesData = await audioFeaturesResponse.json();
-        const avgEnergy = audioFeaturesData.audio_features
-          .filter((f: any) => f !== null)
-          .reduce((sum: number, f: any) => sum + f.energy, 0) / audioFeaturesData.audio_features.length;
-        setEnergyLevel(avgEnergy * 100);
+        const features = audioFeaturesData.audio_features.filter((f: any) => f !== null);
+        
+        // Calculate average energy with amplification to avoid middle-ground values
+        const avgEnergy = features.reduce((sum: number, f: any) => sum + f.energy, 0) / features.length;
+        
+        // Amplify differences from the midpoint (0.5) to create more distinctive values
+        // This pushes values away from the middle toward extremes
+        const amplifiedEnergy = 0.5 + (avgEnergy - 0.5) * 1.5;
+        const clampedEnergy = Math.max(0, Math.min(1, amplifiedEnergy));
+        
+        setEnergyLevel(clampedEnergy * 100);
       }
 
       setTopTracks(topTracksData.items.slice(0, 5)); // Display only 5

@@ -67,13 +67,16 @@ Requirements:
 1. Write 2-3 sentences about their listening behavior this week
 2. Be witty, dry, and subtly flirty - think clever observations, not jokes
 3. Reference actual patterns (time of day, energy, artists)
-4. End with EXACTLY one descriptive word that captures the overall vibe
+4. End with EXACTLY one DISTINCTIVE word that captures the overall vibe
 5. The final word should be separated by "Vibe:" on its own line
+6. NEVER use neutral words like "balanced", "moderate", "mixed", "varied", or "eclectic"
+7. Choose a strong, specific vibe word based on the data - examples: "unhinged", "brooding", "electric", "melancholic", "feral", "ethereal", "chaotic", "serene", "intense", "dreamy"
+8. Energy below 40 = calm/chill vibes, 40-60 = focused/driven vibes, above 60 = high-energy/wild vibes
 
 Format:
 [Your witty 2-3 sentence description here.]
 
-Vibe: [ONE WORD]`;
+Vibe: [ONE DISTINCTIVE WORD - NO NEUTRAL TERMS]`;
 
     console.log("Calling Lovable AI for weekly summary");
 
