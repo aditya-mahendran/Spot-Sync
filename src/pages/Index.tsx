@@ -31,6 +31,8 @@ const Index = () => {
   const [weeklyDescription, setWeeklyDescription] = useState<string>("");
   const [weeklyVibeWord, setWeeklyVibeWord] = useState<string>("");
   const [isGeneratingWeekly, setIsGeneratingWeekly] = useState(false);
+  const [topGenres, setTopGenres] = useState<string[]>([]);
+  const [topArtists, setTopArtists] = useState<any[]>([]);
 
   useEffect(() => {
     // Check if we have a token in localStorage
@@ -149,6 +151,34 @@ const Index = () => {
 
       setTopTracks(topTracksData.items.slice(0, 5)); // Display only 5
       setRecentTracks(recentTracksData.items);
+
+      // Extract top genres and artists
+      const genres = new Set<string>();
+      const artists: any[] = [];
+      topTracksData.items.forEach((track: any) => {
+        track.artists.forEach((artist: any) => {
+          if (!artists.find(a => a.id === artist.id)) {
+            artists.push(artist);
+          }
+          // Note: Genres are not directly on tracks, we'd need to fetch artists separately
+        });
+      });
+      setTopArtists(artists.slice(0, 5));
+
+      // Fetch top artists to get genres
+      const topArtistsResponse = await fetch(
+        "https://api.spotify.com/v1/me/top/artists?limit=5&time_range=medium_term",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      if (topArtistsResponse.ok) {
+        const topArtistsData = await topArtistsResponse.json();
+        topArtistsData.items.forEach((artist: any) => {
+          artist.genres.forEach((genre: string) => genres.add(genre));
+        });
+        setTopGenres(Array.from(genres).slice(0, 5));
+      }
 
       // Generate personality, mood board, and weekly summary after fetching data
       await Promise.all([
@@ -371,6 +401,10 @@ const Index = () => {
               vibeWord={weeklyVibeWord}
               vibeColor={vibeColor}
               isLoading={isGeneratingWeekly}
+              topGenres={topGenres}
+              topArtists={topArtists.map(artist => artist.name)}
+              energyLevel={energyLevel}
+              snapshotImageUrl={moodBoardImages[0]?.url}
             />
             <Snapshots 
               snapshots={snapshots} 
