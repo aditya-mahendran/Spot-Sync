@@ -13,7 +13,7 @@ interface WeeklyListeningProps {
   topGenres: string[];
   topArtists: string[];
   energyLevel: number;
-  snapshotImageUrl?: string;
+  snapshotImageUrls?: string[];
 }
 
 const WeeklyListening = ({ 
@@ -24,7 +24,7 @@ const WeeklyListening = ({
   topGenres,
   topArtists,
   energyLevel,
-  snapshotImageUrl
+  snapshotImageUrls
 }: WeeklyListeningProps) => {
   
   const handleShare = async () => {
@@ -57,34 +57,69 @@ const WeeklyListening = ({
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, 1080, 1920);
 
-      // Add snapshot image if available
-      if (snapshotImageUrl) {
+      // Add collage of up to 12 images (3x4)
+      if (snapshotImageUrls && snapshotImageUrls.length > 0) {
         try {
-          // Fetch the image as a blob to avoid CORS issues
-          const imageResponse = await fetch(snapshotImageUrl);
-          const imageBlob = await imageResponse.blob();
-          const imageUrl = URL.createObjectURL(imageBlob);
-          
-          const img = new Image();
-          await new Promise((resolve, reject) => {
-            img.onload = resolve;
-            img.onerror = reject;
-            img.src = imageUrl;
+          const urls = snapshotImageUrls.slice(0, 12);
+
+          // Helper to load an image from an object URL
+          const loadImg = (url: string) =>
+            new Promise<HTMLImageElement>((resolve, reject) => {
+              const i = new Image();
+              i.onload = () => resolve(i);
+              i.onerror = reject;
+              i.src = url;
+            });
+
+          // Fetch blobs to avoid CORS issues and create Image objects
+          const objectUrls: string[] = [];
+          const images: HTMLImageElement[] = [];
+
+          for (const u of urls) {
+            try {
+              const resp = await fetch(u);
+              const blob = await resp.blob();
+              const objUrl = URL.createObjectURL(blob);
+              objectUrls.push(objUrl);
+              const img = await loadImg(objUrl);
+              images.push(img);
+            } catch (e) {
+              console.warn('Skipping image due to load error:', e);
+            }
+          }
+
+          // Draw 3 rows x 4 columns grid centered with margins
+          const cols = 4;
+          const rows = 3;
+          const marginX = 60;
+          const startY = 420;
+          const availableWidth = canvas.width - marginX * 2; // 960px
+          const cellW = Math.floor(availableWidth / cols);   // 240px
+          const cellH = cellW; // square cells look good for a collage
+          const collageW = cellW * cols;
+          const collageH = cellH * rows;
+          const startX = Math.floor((canvas.width - collageW) / 2);
+
+          images.forEach((img, idx) => {
+            const r = Math.floor(idx / cols);
+            const c = idx % cols;
+            if (r >= rows) return; // only draw first 12
+            const x = startX + c * cellW;
+            const y = startY + r * cellH;
+            ctx.drawImage(img, x, y, cellW, cellH);
           });
-          
-          // Draw image centered with some padding
-          const imgSize = 800;
-          const imgX = (1080 - imgSize) / 2;
-          const imgY = 400;
-          ctx.drawImage(img, imgX, imgY, imgSize, imgSize);
-          
-          // Add color tint overlay
-          ctx.fillStyle = vibeColor + '40';
-          ctx.fillRect(imgX, imgY, imgSize, imgSize);
-          
-          URL.revokeObjectURL(imageUrl);
+
+          // Add color tint overlay using globalAlpha for compatibility with HSL
+          ctx.save();
+          ctx.fillStyle = vibeColor;
+          ctx.globalAlpha = 0.25;
+          ctx.fillRect(startX, startY, collageW, collageH);
+          ctx.restore();
+
+          // Cleanup object URLs
+          objectUrls.forEach((o) => URL.revokeObjectURL(o));
         } catch (error) {
-          console.error('Error loading snapshot image:', error);
+          console.error('Error building collage:', error);
         }
       }
 

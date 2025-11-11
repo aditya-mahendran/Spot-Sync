@@ -25,27 +25,15 @@ const MoodBoard = ({ images }: MoodBoardProps) => {
       <p className="text-muted-foreground mb-4">
         Visual vibes inspired by your listening habits
       </p>
-      <div className="grid grid-cols-2 gap-4">
-        {images.map((image, index) => (
-          <div key={index} className="relative group overflow-hidden rounded-lg aspect-video">
+      <div className="grid grid-cols-4 gap-2 sm:gap-3">
+        {images.slice(0, 12).map((image, index) => (
+          <div key={index} className="overflow-hidden rounded-md aspect-square">
             <img
               src={image.url}
               alt={image.description}
-              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+              className="w-full h-full object-cover"
               loading="lazy"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
-              <p className="text-white text-sm font-medium mb-1">{image.searchTerm}</p>
-              <a
-                href={image.photographerUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-white/80 text-xs flex items-center gap-1 hover:text-white transition-colors"
-              >
-                Photo by {image.photographer}
-                <ExternalLink className="w-3 h-3" />
-              </a>
-            </div>
           </div>
         ))}
       </div>

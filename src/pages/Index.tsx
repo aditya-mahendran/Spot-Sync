@@ -404,7 +404,7 @@ const Index = () => {
               topGenres={topGenres}
               topArtists={topArtists.map(artist => artist.name)}
               energyLevel={energyLevel}
-              snapshotImageUrl={moodBoardImages[0]?.url}
+              snapshotImageUrls={moodBoardImages.slice(0, 12).map((img: any) => img.url)}
             />
             <Snapshots 
               snapshots={snapshots} 
