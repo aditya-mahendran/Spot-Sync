@@ -47,11 +47,11 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        cosmic: {
-          purple: "hsl(var(--cosmic-purple))",
-          cyan: "hsl(var(--cosmic-cyan))",
-          deep: "hsl(var(--cosmic-deep))",
-          dark: "hsl(var(--cosmic-dark))",
+        spotify: {
+          green: "hsl(var(--spotify-green))",
+          black: "hsl(var(--spotify-black))",
+          darkGrey: "hsl(var(--spotify-dark-grey))",
+          lightGrey: "hsl(var(--spotify-light-grey))",
         },
       },
       borderRadius: {
@@ -76,21 +76,10 @@ export default {
             height: "0",
           },
         },
-        "fade-in": {
-          "0%": {
-            opacity: "0",
-            transform: "translateY(10px)",
-          },
-          "100%": {
-            opacity: "1",
-            transform: "translateY(0)",
-          },
-        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
-        "fade-in": "fade-in 0.6s ease-out forwards",
       },
     },
   },

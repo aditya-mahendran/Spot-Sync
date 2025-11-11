@@ -8,50 +8,44 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 217 33% 6%;
+    --background: 0 0% 7%;
     --foreground: 0 0% 98%;
 
-    --card: 217 33% 9%;
+    --card: 0 0% 11%;
     --card-foreground: 0 0% 98%;
 
-    --popover: 217 33% 9%;
+    --popover: 0 0% 11%;
     --popover-foreground: 0 0% 98%;
 
-    --primary: 263 70% 60%;
+    --primary: 141 73% 42%;
     --primary-foreground: 0 0% 98%;
 
-    --secondary: 217 33% 12%;
+    --secondary: 0 0% 14%;
     --secondary-foreground: 0 0% 98%;
 
-    --muted: 217 33% 12%;
+    --muted: 0 0% 14%;
     --muted-foreground: 0 0% 65%;
 
-    --accent: 186 94% 65%;
-    --accent-foreground: 217 33% 6%;
+    --accent: 141 73% 42%;
+    --accent-foreground: 0 0% 98%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 217 33% 18%;
-    --input: 217 33% 18%;
-    --ring: 263 70% 60%;
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 141 73% 42%;
 
     --radius: 1rem;
 
-    /* Cosmic design tokens */
-    --cosmic-purple: 263 70% 60%;
-    --cosmic-cyan: 186 94% 65%;
-    --cosmic-deep: 217 33% 6%;
-    --cosmic-dark: 217 33% 9%;
-    
-    /* Gradients */
-    --gradient-cosmic: linear-gradient(135deg, hsl(217 33% 6%) 0%, hsl(263 70% 20%) 50%, hsl(186 94% 25%) 100%);
-    --gradient-aurora: linear-gradient(45deg, hsl(263 70% 60% / 0.3) 0%, hsl(186 94% 65% / 0.3) 100%);
-    --gradient-card: linear-gradient(135deg, hsl(217 33% 9% / 0.6) 0%, hsl(263 70% 15% / 0.4) 100%);
-    
-    /* Effects */
-    --shadow-glow-purple: 0 0 40px hsl(var(--cosmic-purple) / 0.4);
-    --shadow-glow-cyan: 0 0 40px hsl(var(--cosmic-cyan) / 0.3);
+    /* Spotify-specific design tokens */
+    --spotify-green: 141 73% 42%;
+    --spotify-black: 0 0% 7%;
+    --spotify-dark-grey: 0 0% 11%;
+    --spotify-light-grey: 0 0% 20%;
+
+    --gradient-overlay: linear-gradient(180deg, rgba(18, 18, 18, 0) 0%, rgba(18, 18, 18, 0.9) 100%);
+    --shadow-glow: 0 8px 32px hsl(var(--spotify-green) / 0.3);
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 }
