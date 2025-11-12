@@ -11,6 +11,7 @@ import Snapshots from "@/components/Snapshots";
 import MusicPencilDrawings from "@/components/MusicPencilDrawings";
 import DrawingAnimation from "@/components/DrawingAnimation";
 import WeeklyListening from "@/components/WeeklyListening";
+import { SpotifyDottedLines } from "@/components/SpotifyDottedLines";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -145,12 +146,19 @@ const Index = () => {
         const audioFeaturesData = await audioFeaturesResponse.json();
         const features = audioFeaturesData.audio_features.filter((f: any) => f !== null);
         
-        // Calculate average energy with amplification to avoid middle-ground values
+        // Calculate comprehensive energy using multiple audio features
+        // Energy: intensity and activity level
+        // Valence: musical positivity (bright vs dark)
+        // Danceability: rhythmic suitability for dancing
         const avgEnergy = features.reduce((sum: number, f: any) => sum + f.energy, 0) / features.length;
+        const avgValence = features.reduce((sum: number, f: any) => sum + f.valence, 0) / features.length;
+        const avgDanceability = features.reduce((sum: number, f: any) => sum + f.danceability, 0) / features.length;
         
-        // Amplify differences from the midpoint (0.5) to create more distinctive values
-        // This pushes values away from the middle toward extremes
-        const amplifiedEnergy = 0.5 + (avgEnergy - 0.5) * 1.5;
+        // Weighted composite: emphasize energy and valence for brightness
+        const compositeEnergy = (avgEnergy * 0.5) + (avgValence * 0.3) + (avgDanceability * 0.2);
+        
+        // Amplify differences from midpoint for more distinctive results
+        const amplifiedEnergy = 0.5 + (compositeEnergy - 0.5) * 1.8;
         const clampedEnergy = Math.max(0, Math.min(1, amplifiedEnergy));
         
         setEnergyLevel(clampedEnergy * 100);
@@ -324,6 +332,7 @@ const Index = () => {
       <div className="fixed inset-0 pointer-events-none z-0">
         <RipplingStars />
         <MusicPencilDrawings />
+        <SpotifyDottedLines />
         {!accessToken && <DrawingAnimation />}
       </div>
       

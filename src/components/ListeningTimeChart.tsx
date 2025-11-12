@@ -6,6 +6,14 @@ interface ListeningTimeChartProps {
 }
 
 export const ListeningTimeChart = ({ recentTracks }: ListeningTimeChartProps) => {
+  // Convert 24h to 12h format with AM/PM
+  const formatTimeAMPM = (hour: number) => {
+    if (hour === 0) return '12 AM';
+    if (hour === 12) return '12 PM';
+    if (hour < 12) return `${hour} AM`;
+    return `${hour - 12} PM`;
+  };
+
   // Process the data to get hourly listening patterns
   const processListeningData = () => {
     const hourCounts: { [key: number]: number } = {};
@@ -28,7 +36,7 @@ export const ListeningTimeChart = ({ recentTracks }: ListeningTimeChartProps) =>
     return Object.entries(hourCounts).map(([hour, count]) => ({
       hour: parseInt(hour),
       count,
-      label: `${hour.toString().padStart(2, '0')}:00`,
+      label: formatTimeAMPM(parseInt(hour)),
     }));
   };
   
@@ -61,27 +69,33 @@ export const ListeningTimeChart = ({ recentTracks }: ListeningTimeChartProps) =>
           </div>
         </div>
         
-        <ResponsiveContainer width="100%" height={300}>
+        <ResponsiveContainer width="100%" height={200}>
           <LineChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" />
             <XAxis 
               dataKey="hour" 
-              tickFormatter={(hour) => `${hour}:00`}
-              label={{ value: 'Hour of Day', position: 'insideBottom', offset: -5 }}
+              tickFormatter={formatTimeAMPM}
+              stroke="hsl(var(--muted-foreground))"
+              tick={{ fontSize: 12 }}
             />
             <YAxis 
-              label={{ value: 'Tracks Played', angle: -90, position: 'insideLeft' }}
+              stroke="hsl(var(--muted-foreground))"
+              tick={{ fontSize: 12 }}
             />
             <Tooltip 
               formatter={(value: any) => [`${value} tracks`, 'Count']}
-              labelFormatter={(hour) => `${hour}:00`}
+              labelFormatter={(hour) => formatTimeAMPM(hour)}
+              contentStyle={{ 
+                backgroundColor: 'hsl(var(--card))',
+                border: '1px solid hsl(var(--border))',
+                borderRadius: '0.5rem'
+              }}
             />
             <Line 
               type="monotone" 
               dataKey="count" 
               stroke="hsl(var(--primary))" 
-              strokeWidth={2}
-              dot={{ fill: 'hsl(var(--primary))', r: 4 }}
+              strokeWidth={3}
+              dot={{ fill: 'hsl(var(--primary))', r: 5 }}
             />
           </LineChart>
         </ResponsiveContainer>
