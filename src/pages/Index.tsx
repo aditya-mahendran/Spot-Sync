@@ -146,22 +146,25 @@ const Index = () => {
         const audioFeaturesData = await audioFeaturesResponse.json();
         const features = audioFeaturesData.audio_features.filter((f: any) => f !== null);
         
-        // Calculate comprehensive energy using multiple audio features
-        // Energy: intensity and activity level
-        // Valence: musical positivity (bright vs dark)
-        // Danceability: rhythmic suitability for dancing
-        const avgEnergy = features.reduce((sum: number, f: any) => sum + f.energy, 0) / features.length;
+        // Calculate vibe using liveness, valence, and tempo
+        // Liveness: presence of audience/live performance (0-1)
+        // Valence: musical positivity/brightness (0-1)
+        // Tempo: speed in BPM (normalize from typical 60-200 range to 0-1)
+        const avgLiveness = features.reduce((sum: number, f: any) => sum + f.liveness, 0) / features.length;
         const avgValence = features.reduce((sum: number, f: any) => sum + f.valence, 0) / features.length;
-        const avgDanceability = features.reduce((sum: number, f: any) => sum + f.danceability, 0) / features.length;
+        const avgTempo = features.reduce((sum: number, f: any) => sum + f.tempo, 0) / features.length;
         
-        // Weighted composite: emphasize energy and valence for brightness
-        const compositeEnergy = (avgEnergy * 0.5) + (avgValence * 0.3) + (avgDanceability * 0.2);
+        // Normalize tempo: 60 BPM = 0, 200 BPM = 1
+        const normalizedTempo = Math.max(0, Math.min(1, (avgTempo - 60) / 140));
+        
+        // Weighted composite: valence and tempo are most important for vibe
+        const compositeVibe = (avgValence * 0.4) + (normalizedTempo * 0.4) + (avgLiveness * 0.2);
         
         // Amplify differences from midpoint for more distinctive results
-        const amplifiedEnergy = 0.5 + (compositeEnergy - 0.5) * 1.8;
-        const clampedEnergy = Math.max(0, Math.min(1, amplifiedEnergy));
+        const amplifiedVibe = 0.5 + (compositeVibe - 0.5) * 1.8;
+        const clampedVibe = Math.max(0, Math.min(1, amplifiedVibe));
         
-        setEnergyLevel(clampedEnergy * 100);
+        setEnergyLevel(clampedVibe * 100);
       }
 
       setTopTracks(topTracksData.items.slice(0, 5)); // Display only 5
