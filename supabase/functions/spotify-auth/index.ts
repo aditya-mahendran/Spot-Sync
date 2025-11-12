@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { code, redirectUri } = await req.json();
+    const { code, redirectUri, refreshToken } = await req.json();
 
     const clientId = Deno.env.get("SPOTIFY_CLIENT_ID");
     const clientSecret = Deno.env.get("SPOTIFY_CLIENT_SECRET");
@@ -22,7 +22,25 @@ serve(async (req) => {
       throw new Error("Spotify credentials not configured");
     }
 
-    // Exchange authorization code for access token
+    let body: URLSearchParams;
+    
+    if (refreshToken) {
+      // Refresh existing token
+      console.log("Refreshing Spotify token");
+      body = new URLSearchParams({
+        grant_type: "refresh_token",
+        refresh_token: refreshToken,
+      });
+    } else {
+      // Exchange authorization code for access token
+      console.log("Exchanging code for token");
+      body = new URLSearchParams({
+        grant_type: "authorization_code",
+        code: code,
+        redirect_uri: redirectUri,
+      });
+    }
+
     const tokenResponse = await fetch(
       "https://accounts.spotify.com/api/token",
       {
@@ -31,21 +49,18 @@ serve(async (req) => {
           "Content-Type": "application/x-www-form-urlencoded",
           Authorization: `Basic ${btoa(`${clientId}:${clientSecret}`)}`,
         },
-        body: new URLSearchParams({
-          grant_type: "authorization_code",
-          code: code,
-          redirect_uri: redirectUri,
-        }),
+        body: body,
       }
     );
 
     if (!tokenResponse.ok) {
       const error = await tokenResponse.text();
       console.error("Spotify token error:", error);
-      throw new Error("Failed to exchange code for token");
+      throw new Error("Failed to get token from Spotify");
     }
 
     const tokenData = await tokenResponse.json();
+    console.log("Token obtained successfully, expires in:", tokenData.expires_in);
 
     return new Response(JSON.stringify(tokenData), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

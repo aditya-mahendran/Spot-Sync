@@ -56,6 +56,8 @@ const Index = () => {
     const redirectUri = `${window.location.origin}/`;
     const scopes = "user-top-read user-read-recently-played";
 
+    console.log("Spotify redirect URI:", redirectUri);
+
     const authUrl = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=code&redirect_uri=${encodeURIComponent(
       redirectUri,
     )}&scope=${encodeURIComponent(scopes)}`;
@@ -88,6 +90,15 @@ const Index = () => {
         setAccessToken(data.access_token);
         localStorage.setItem("spotify_access_token", data.access_token);
         
+        // Store refresh token and expiry time
+        if (data.refresh_token) {
+          localStorage.setItem("spotify_refresh_token", data.refresh_token);
+        }
+        if (data.expires_in) {
+          const expiryTime = Date.now() + (data.expires_in * 1000);
+          localStorage.setItem("spotify_token_expiry", expiryTime.toString());
+        }
+        
         // Minimum 2s loading interlude for effect
         await Promise.all([
           fetchMusicData(data.access_token),
@@ -106,15 +117,90 @@ const Index = () => {
     }
   };
 
+  const refreshSpotifyToken = async (): Promise<string | null> => {
+    const refreshToken = localStorage.getItem("spotify_refresh_token");
+    if (!refreshToken) {
+      console.error("No refresh token available");
+      return null;
+    }
+
+    try {
+      console.log("Refreshing Spotify access token...");
+      const { data, error } = await supabase.functions.invoke("spotify-auth", {
+        body: { refreshToken },
+      });
+
+      if (error) throw error;
+
+      if (data.access_token) {
+        localStorage.setItem("spotify_access_token", data.access_token);
+        
+        // Update expiry time
+        if (data.expires_in) {
+          const expiryTime = Date.now() + (data.expires_in * 1000);
+          localStorage.setItem("spotify_token_expiry", expiryTime.toString());
+        }
+        
+        // Store new refresh token if provided
+        if (data.refresh_token) {
+          localStorage.setItem("spotify_refresh_token", data.refresh_token);
+        }
+        
+        setAccessToken(data.access_token);
+        console.log("Token refreshed successfully");
+        return data.access_token;
+      }
+    } catch (error: any) {
+      console.error("Error refreshing token:", error);
+      toast.error("Session expired. Please reconnect to Spotify.");
+      localStorage.removeItem("spotify_access_token");
+      localStorage.removeItem("spotify_refresh_token");
+      localStorage.removeItem("spotify_token_expiry");
+      setAccessToken(null);
+    }
+    return null;
+  };
+
+  const getValidToken = async (currentToken: string): Promise<string | null> => {
+    const expiryTime = localStorage.getItem("spotify_token_expiry");
+    
+    if (!expiryTime) {
+      console.log("No expiry time found, token may be invalid");
+      return currentToken;
+    }
+
+    const now = Date.now();
+    const expiry = parseInt(expiryTime);
+    
+    // Refresh if token expires in less than 5 minutes
+    if (now >= expiry - (5 * 60 * 1000)) {
+      console.log("Token expired or expiring soon, refreshing...");
+      return await refreshSpotifyToken();
+    }
+    
+    return currentToken;
+  };
+
   const fetchMusicData = async (token: string) => {
     setIsLoading(true);
     setShowLoadingInterlude(true);
     try {
+      // Ensure we have a valid token
+      const validToken = await getValidToken(token);
+      if (!validToken) {
+        throw new Error("Failed to obtain valid Spotify token");
+      }
+
+      console.log("Fetching Spotify data with valid token");
+
       // Fetch top tracks
       const topTracksResponse = await fetch(
         "https://api.spotify.com/v1/me/top/tracks?limit=20&time_range=medium_term",
         {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { 
+            Authorization: `Bearer ${validToken}`,
+            'Content-Type': 'application/json'
+          },
         }
       );
 
@@ -122,7 +208,10 @@ const Index = () => {
       const recentTracksResponse = await fetch(
         "https://api.spotify.com/v1/me/player/recently-played?limit=50",
         {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { 
+            Authorization: `Bearer ${validToken}`,
+            'Content-Type': 'application/json'
+          },
         }
       );
 
@@ -140,7 +229,10 @@ const Index = () => {
       const audioFeaturesResponse = await fetch(
         `https://api.spotify.com/v1/audio-features?ids=${trackIds}`,
         {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { 
+            Authorization: `Bearer ${validToken}`,
+            'Content-Type': 'application/json'
+          },
         }
       );
 
@@ -202,7 +294,10 @@ const Index = () => {
       const topArtistsResponse = await fetch(
         "https://api.spotify.com/v1/me/top/artists?limit=5&time_range=medium_term",
         {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { 
+            Authorization: `Bearer ${validToken}`,
+            'Content-Type': 'application/json'
+          },
         }
       );
       if (topArtistsResponse.ok) {
