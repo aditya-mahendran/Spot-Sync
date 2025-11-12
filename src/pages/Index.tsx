@@ -95,8 +95,10 @@ const Index = () => {
           localStorage.setItem("spotify_refresh_token", data.refresh_token);
         }
         if (data.expires_in) {
-          const expiryTime = Date.now() + (data.expires_in * 1000);
-          localStorage.setItem("spotify_token_expiry", expiryTime.toString());
+          const expiresAt = Date.now() + (data.expires_in * 1000) - (5 * 60 * 1000); // refresh 5 min early
+          localStorage.setItem("spotify_expires_at", expiresAt.toString());
+          // Backward compatibility
+          localStorage.setItem("spotify_token_expiry", (expiresAt + (5 * 60 * 1000)).toString());
         }
         
         // Minimum 2s loading interlude for effect
@@ -137,8 +139,10 @@ const Index = () => {
         
         // Update expiry time
         if (data.expires_in) {
-          const expiryTime = Date.now() + (data.expires_in * 1000);
-          localStorage.setItem("spotify_token_expiry", expiryTime.toString());
+          const expiresAt = Date.now() + (data.expires_in * 1000) - (5 * 60 * 1000);
+          localStorage.setItem("spotify_expires_at", expiresAt.toString());
+          // Backward compatibility
+          localStorage.setItem("spotify_token_expiry", (expiresAt + (5 * 60 * 1000)).toString());
         }
         
         // Store new refresh token if provided
@@ -162,19 +166,18 @@ const Index = () => {
   };
 
   const getValidToken = async (currentToken: string): Promise<string | null> => {
-    const expiryTime = localStorage.getItem("spotify_token_expiry");
+    const expiresAtStr = localStorage.getItem("spotify_expires_at") || localStorage.getItem("spotify_token_expiry");
     
-    if (!expiryTime) {
+    if (!expiresAtStr) {
       console.log("No expiry time found, token may be invalid");
       return currentToken;
     }
 
     const now = Date.now();
-    const expiry = parseInt(expiryTime);
+    const expiresAt = parseInt(expiresAtStr);
     
-    // Refresh if token expires in less than 5 minutes
-    if (now >= expiry - (5 * 60 * 1000)) {
-      console.log("Token expired or expiring soon, refreshing...");
+    if (now >= expiresAt) {
+      console.log("Token expired, refreshing...");
       return await refreshSpotifyToken();
     }
     
@@ -185,134 +188,72 @@ const Index = () => {
     setIsLoading(true);
     setShowLoadingInterlude(true);
     try {
-      // Ensure we have a valid token
-      const validToken = await getValidToken(token);
-      if (!validToken) {
-        throw new Error("Failed to obtain valid Spotify token");
-      }
+      // Centralized server-side Spotify fetching (handles refresh + headers)
+      const refreshToken = localStorage.getItem("spotify_refresh_token");
+      const expiresAtStr = localStorage.getItem("spotify_expires_at");
 
-      console.log("Fetching Spotify data with valid token");
-
-      // Fetch top tracks
-      const topTracksResponse = await fetch(
-        "https://api.spotify.com/v1/me/top/tracks?limit=20&time_range=medium_term",
-        {
-          headers: { 
-            Authorization: `Bearer ${validToken}`,
-            'Content-Type': 'application/json'
-          },
-        }
-      );
-
-      // Fetch recently played tracks for listening pattern analysis
-      const recentTracksResponse = await fetch(
-        "https://api.spotify.com/v1/me/player/recently-played?limit=50",
-        {
-          headers: { 
-            Authorization: `Bearer ${validToken}`,
-            'Content-Type': 'application/json'
-          },
-        }
-      );
-
-      if (!topTracksResponse.ok || !recentTracksResponse.ok) {
-        throw new Error("Failed to fetch music data");
-      }
-
-      const topTracksData = await topTracksResponse.json();
-      const recentTracksData = await recentTracksResponse.json();
-
-      // Fetch audio features for energy calculation
-      const trackIds = topTracksData.items.map((t: any) => t.id).join(",");
-      console.log('Fetching audio features for track IDs:', trackIds);
-      
-      const audioFeaturesResponse = await fetch(
-        `https://api.spotify.com/v1/audio-features?ids=${trackIds}`,
-        {
-          headers: { 
-            Authorization: `Bearer ${validToken}`,
-            'Content-Type': 'application/json'
-          },
-        }
-      );
-
-      console.log('Audio features response status:', audioFeaturesResponse.status);
-
-      if (audioFeaturesResponse.ok) {
-        const audioFeaturesData = await audioFeaturesResponse.json();
-        const features = audioFeaturesData.audio_features.filter((f: any) => f !== null);
-        
-        console.log('Audio features count:', features.length);
-        
-        if (features.length > 0) {
-          // Calculate vibe using liveness, valence, and tempo
-          const avgLiveness = features.reduce((sum: number, f: any) => sum + f.liveness, 0) / features.length;
-          const avgValence = features.reduce((sum: number, f: any) => sum + f.valence, 0) / features.length;
-          const avgTempo = features.reduce((sum: number, f: any) => sum + f.tempo, 0) / features.length;
-          
-          console.log('Raw audio values:', { avgLiveness, avgValence, avgTempo });
-          
-          // Normalize tempo: 60 BPM = 0, 200 BPM = 1
-          const normalizedTempo = Math.max(0, Math.min(1, (avgTempo - 60) / 140));
-          
-          // Weighted composite: valence and tempo are most important for vibe
-          const compositeVibe = (avgValence * 0.4) + (normalizedTempo * 0.4) + (avgLiveness * 0.2);
-          
-          console.log('Composite vibe before amplification:', compositeVibe);
-          
-          // Amplify differences from midpoint for more distinctive results
-          const amplifiedVibe = 0.5 + (compositeVibe - 0.5) * 1.8;
-          const clampedVibe = Math.max(0, Math.min(1, amplifiedVibe));
-          
-          console.log('Final vibe energy:', clampedVibe * 100);
-          
-          setEnergyLevel(clampedVibe * 100);
-        } else {
-          console.error('No valid audio features found');
-        }
-      } else {
-        console.error('Failed to fetch audio features:', await audioFeaturesResponse.text());
-      }
-
-      setTopTracks(topTracksData.items.slice(0, 5)); // Display only 5
-      setRecentTracks(recentTracksData.items);
-
-      // Extract top genres and artists
-      const genres = new Set<string>();
-      const artists: any[] = [];
-      topTracksData.items.forEach((track: any) => {
-        track.artists.forEach((artist: any) => {
-          if (!artists.find(a => a.id === artist.id)) {
-            artists.push(artist);
-          }
-          // Note: Genres are not directly on tracks, we'd need to fetch artists separately
-        });
+      const { data, error } = await supabase.functions.invoke("spotify-data", {
+        body: {
+          access_token: token,
+          refresh_token: refreshToken ?? undefined,
+          expires_at: expiresAtStr ? parseInt(expiresAtStr) : undefined,
+        },
       });
-      setTopArtists(artists.slice(0, 5));
 
-      // Fetch top artists to get genres
-      const topArtistsResponse = await fetch(
-        "https://api.spotify.com/v1/me/top/artists?limit=5&time_range=medium_term",
-        {
-          headers: { 
-            Authorization: `Bearer ${validToken}`,
-            'Content-Type': 'application/json'
-          },
-        }
-      );
-      if (topArtistsResponse.ok) {
-        const topArtistsData = await topArtistsResponse.json();
-        topArtistsData.items.forEach((artist: any) => {
-          artist.genres.forEach((genre: string) => genres.add(genre));
-        });
-        setTopGenres(Array.from(genres).slice(0, 5));
+      if (error) throw error;
+      if (!data) throw new Error("No data from spotify-data function");
+
+      // Update tokens if refreshed on the server
+      if (data.token?.access_token) {
+        console.log("Using Spotify token:", data.token.access_token.slice(0, 8), "...");
+        localStorage.setItem("spotify_access_token", data.token.access_token);
+        setAccessToken(data.token.access_token);
       }
+      if (data.token?.refresh_token) {
+        localStorage.setItem("spotify_refresh_token", data.token.refresh_token);
+      }
+      if (data.token?.expires_at) {
+        localStorage.setItem("spotify_expires_at", String(data.token.expires_at));
+      }
+
+      const topTracksData = data.topTracks;
+      const recentTracksData = data.recentTracks;
+      const topArtistsData = data.topArtists;
+      const audioFeaturesData = data.audioFeatures;
+
+      // Compute vibe from audio features
+      const features = (audioFeaturesData?.audio_features || []).filter((f: any) => f !== null);
+      console.log('Audio features count:', features.length);
+      if (features.length > 0) {
+        const avgLiveness = features.reduce((sum: number, f: any) => sum + f.liveness, 0) / features.length;
+        const avgValence = features.reduce((sum: number, f: any) => sum + f.valence, 0) / features.length;
+        const avgTempo = features.reduce((sum: number, f: any) => sum + f.tempo, 0) / features.length;
+        console.log('Raw audio values:', { avgLiveness, avgValence, avgTempo });
+        const normalizedTempo = Math.max(0, Math.min(1, (avgTempo - 60) / 140));
+        const compositeVibe = (avgValence * 0.4) + (normalizedTempo * 0.4) + (avgLiveness * 0.2);
+        const amplifiedVibe = 0.5 + (compositeVibe - 0.5) * 1.8;
+        const clampedVibe = Math.max(0, Math.min(1, amplifiedVibe));
+        console.log('Final vibe energy:', clampedVibe * 100);
+        setEnergyLevel(clampedVibe * 100);
+      }
+
+      // Update UI data
+      setTopTracks((topTracksData?.items || []).slice(0, 5));
+      setRecentTracks(recentTracksData?.items || []);
+
+      // Genres and artists from top artists
+      const genres = new Set<string>();
+      (topArtistsData?.items || []).forEach((artist: any) => {
+        (artist.genres || []).forEach((genre: string) => genres.add(genre));
+      });
+      setTopGenres(Array.from(genres).slice(0, 5));
+      setTopArtists((topArtistsData?.items || []).slice(0, 5));
 
       // Generate personality, mood board, and weekly summary after fetching data
       await Promise.all([
-        generatePersonality(topTracksData.items, recentTracksData.items),
-        generateMoodBoard(topTracksData.items, recentTracksData.items),
-        generateWeeklySummary(recentTracksData.items),
+        generatePersonality(topTracksData.items || [], recentTracksData.items || []),
+        generateMoodBoard(topTracksData.items || [], recentTracksData.items || []),
+        generateWeeklySummary(recentTracksData.items || []),
         new Promise(resolve => setTimeout(resolve, 2000)) // Minimum loading time
       ]);
       
@@ -323,6 +264,8 @@ const Index = () => {
       setShowLoadingInterlude(false);
       // Clear invalid token
       localStorage.removeItem("spotify_access_token");
+      localStorage.removeItem("spotify_refresh_token");
+      localStorage.removeItem("spotify_expires_at");
       setAccessToken(null);
     } finally {
       setIsLoading(false);
