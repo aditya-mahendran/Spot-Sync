@@ -188,38 +188,72 @@ const Index = () => {
     setIsLoading(true);
     setShowLoadingInterlude(true);
     try {
-      // Centralized server-side Spotify fetching (handles refresh + headers)
-      const refreshToken = localStorage.getItem("spotify_refresh_token");
-      const expiresAtStr = localStorage.getItem("spotify_expires_at");
-
-      const { data, error } = await supabase.functions.invoke("spotify-data", {
-        body: {
-          access_token: token,
-          refresh_token: refreshToken ?? undefined,
-          expires_at: expiresAtStr ? parseInt(expiresAtStr) : undefined,
-        },
-      });
-
-      if (error) throw error;
-      if (!data) throw new Error("No data from spotify-data function");
-
-      // Update tokens if refreshed on the server
-      if (data.token?.access_token) {
-        console.log("Using Spotify token:", data.token.access_token.slice(0, 8), "...");
-        localStorage.setItem("spotify_access_token", data.token.access_token);
-        setAccessToken(data.token.access_token);
-      }
-      if (data.token?.refresh_token) {
-        localStorage.setItem("spotify_refresh_token", data.token.refresh_token);
-      }
-      if (data.token?.expires_at) {
-        localStorage.setItem("spotify_expires_at", String(data.token.expires_at));
+      const validToken = await getValidToken(token);
+      if (!validToken) {
+        throw new Error("Failed to get valid token");
       }
 
-      const topTracksData = data.topTracks;
-      const recentTracksData = data.recentTracks;
-      const topArtistsData = data.topArtists;
-      const audioFeaturesData = data.audioFeatures;
+      const headers = {
+        Authorization: `Bearer ${validToken}`,
+      };
+
+      // Fetch top tracks
+      const topTracksResponse = await fetch(
+        "https://api.spotify.com/v1/me/top/tracks?limit=20&time_range=medium_term",
+        { headers }
+      );
+
+      if (!topTracksResponse.ok) {
+        throw new Error(`Top tracks failed: ${topTracksResponse.status}`);
+      }
+
+      const topTracksData = await topTracksResponse.json();
+
+      // Fetch recently played
+      const recentResponse = await fetch(
+        "https://api.spotify.com/v1/me/player/recently-played?limit=50",
+        { headers }
+      );
+
+      if (!recentResponse.ok) {
+        throw new Error(`Recent tracks failed: ${recentResponse.status}`);
+      }
+
+      const recentTracksData = await recentResponse.json();
+
+      // Fetch top artists for genres
+      const topArtistsResponse = await fetch(
+        "https://api.spotify.com/v1/me/top/artists?limit=5&time_range=medium_term",
+        { headers }
+      );
+
+      if (!topArtistsResponse.ok) {
+        throw new Error(`Top artists failed: ${topArtistsResponse.status}`);
+      }
+
+      const topArtistsData = await topArtistsResponse.json();
+
+      // Fetch audio features for top tracks
+      const trackIds = topTracksData.items.map((track: any) => track.id).filter(Boolean);
+      console.log('Track IDs for audio features:', trackIds.length);
+      
+      let audioFeaturesData: any = { audio_features: [] };
+      
+      if (trackIds.length > 0) {
+        const idsCsv = trackIds.slice(0, 100).join(",");
+        const audioFeaturesResponse = await fetch(
+          `https://api.spotify.com/v1/audio-features?ids=${idsCsv}`,
+          { headers }
+        );
+
+        console.log('Audio features response status:', audioFeaturesResponse.status);
+        
+        if (audioFeaturesResponse.ok) {
+          audioFeaturesData = await audioFeaturesResponse.json();
+        } else {
+          console.warn('Audio features request failed:', audioFeaturesResponse.status);
+        }
+      }
 
       // Compute vibe from audio features
       const features = (audioFeaturesData?.audio_features || []).filter((f: any) => f !== null);

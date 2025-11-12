@@ -65,6 +65,13 @@ async function getValidSpotifyToken(tokens: Tokens): Promise<Tokens> {
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
+  // Health check endpoint
+  if (req.method === "GET" && new URL(req.url).pathname.endsWith("/health")) {
+    return new Response(JSON.stringify({ ok: true }), { 
+      headers: { ...corsHeaders, "Content-Type": "application/json" } 
+    });
+  }
+
   try {
     const body = await req.json();
     const inputTokens: Tokens = {
@@ -82,59 +89,92 @@ serve(async (req) => {
       "Content-Type": "application/json",
     } as const;
 
-    // Sanity check: /me
+    // Gate: /v1/me must work first
     const meResp = await fetch("https://api.spotify.com/v1/me", { headers });
     console.log("ME status:", meResp.status);
+    
     if (!meResp.ok) {
       const t = await meResp.text();
       console.error("/v1/me failed:", meResp.status, t);
-      return new Response(JSON.stringify({ error: "Invalid Spotify token", status: meResp.status }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ 
+        ok: false,
+        me: null,
+        top_tracks: [],
+        audio_features: [],
+        refreshed_tokens: null,
+        error: { status: meResp.status, code: "ME_FAILED", message: "Invalid Spotify token" }
+      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Top tracks
-    const topTracksResp = await fetch("https://api.spotify.com/v1/me/top/tracks?limit=20&time_range=medium_term", { headers });
-    console.log("Top tracks status:", topTracksResp.status);
-    if (!topTracksResp.ok) throw new Error(`Top tracks failed: ${topTracksResp.status}`);
-    const topTracks = await topTracksResp.json();
+    const meJson = await meResp.json();
 
-    // Recent tracks
-    const recentResp = await fetch("https://api.spotify.com/v1/me/player/recently-played?limit=50", { headers });
-    console.log("Recent tracks status:", recentResp.status);
-    if (!recentResp.ok) throw new Error(`Recent tracks failed: ${recentResp.status}`);
-    const recentTracks = await recentResp.json();
-
-    // Top artists (for genres)
-    const topArtistsResp = await fetch("https://api.spotify.com/v1/me/top/artists?limit=5&time_range=medium_term", { headers });
-    console.log("Top artists status:", topArtistsResp.status);
-    if (!topArtistsResp.ok) throw new Error(`Top artists failed: ${topArtistsResp.status}`);
-    const topArtists = await topArtistsResp.json();
-
-    // Audio features for top tracks
-    const ids = (topTracks.items || []).map((t: any) => t.id).filter(Boolean);
-    const idsCsv = ids.slice(0, 100).join(",");
-    console.log({ msg: "About to call audio-features", idsCount: ids.length, hasBearer: headers.Authorization.startsWith("Bearer "), tokenPreview: headers.Authorization.slice(7, 15) });
-
+    // Now fetch all other data
+    let topTracks: any = { items: [] };
+    let recentTracks: any = { items: [] };
+    let topArtists: any = { items: [] };
     let audioFeatures: any = { audio_features: [] };
-    if (idsCsv) {
-      const featuresResp = await fetch(`https://api.spotify.com/v1/audio-features?ids=${idsCsv}`, { headers });
-      console.log("Audio features status:", featuresResp.status);
-      if (!featuresResp.ok) throw new Error(`Audio features failed: ${featuresResp.status}`);
-      audioFeatures = await featuresResp.json();
+
+    try {
+      const topTracksResp = await fetch("https://api.spotify.com/v1/me/top/tracks?limit=20&time_range=medium_term", { headers });
+      console.log("Top tracks status:", topTracksResp.status);
+      if (topTracksResp.ok) topTracks = await topTracksResp.json();
+    } catch (e) {
+      console.error("Top tracks error:", e);
+    }
+
+    try {
+      const recentResp = await fetch("https://api.spotify.com/v1/me/player/recently-played?limit=50", { headers });
+      console.log("Recent tracks status:", recentResp.status);
+      if (recentResp.ok) recentTracks = await recentResp.json();
+    } catch (e) {
+      console.error("Recent tracks error:", e);
+    }
+
+    try {
+      const topArtistsResp = await fetch("https://api.spotify.com/v1/me/top/artists?limit=5&time_range=medium_term", { headers });
+      console.log("Top artists status:", topArtistsResp.status);
+      if (topArtistsResp.ok) topArtists = await topArtistsResp.json();
+    } catch (e) {
+      console.error("Top artists error:", e);
+    }
+
+    try {
+      const ids = (topTracks.items || []).map((t: any) => t.id).filter(Boolean);
+      const idsCsv = ids.slice(0, 100).join(",");
+      console.log({ msg: "About to call audio-features", idsCount: ids.length, hasBearer: headers.Authorization.startsWith("Bearer "), tokenPreview: headers.Authorization.slice(7, 15) });
+
+      if (idsCsv) {
+        const featuresResp = await fetch(`https://api.spotify.com/v1/audio-features?ids=${idsCsv}`, { headers });
+        console.log("Audio features status:", featuresResp.status);
+        if (featuresResp.ok) audioFeatures = await featuresResp.json();
+      }
+    } catch (e) {
+      console.error("Audio features error:", e);
     }
 
     return new Response(
       JSON.stringify({
+        ok: true,
+        me: meJson,
         topTracks,
         recentTracks,
         topArtists,
         audioFeatures,
-        token: { access_token, refresh_token, expires_at },
+        refreshed_tokens: { access_token, refresh_token, expires_at },
+        error: null
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (e) {
     console.error("spotify-data error:", e);
     const msg = e instanceof Error ? e.message : "Unknown error";
-    return new Response(JSON.stringify({ error: msg }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ 
+      ok: false,
+      me: null,
+      top_tracks: [],
+      audio_features: [],
+      refreshed_tokens: null,
+      error: { status: 500, code: "SERVER_ERROR", message: msg }
+    }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });
