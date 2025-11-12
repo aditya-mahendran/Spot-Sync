@@ -188,107 +188,59 @@ const Index = () => {
     setIsLoading(true);
     setShowLoadingInterlude(true);
     try {
-      const validToken = await getValidToken(token);
-      if (!validToken) {
-        throw new Error("Failed to get valid token");
+      // Use spotify-data edge function as source of truth
+      const refreshToken = localStorage.getItem("spotify_refresh_token");
+      const expiresAtStr = localStorage.getItem("spotify_expires_at");
+
+      const { data, error } = await supabase.functions.invoke("spotify-data", {
+        body: {
+          access_token: token,
+          refresh_token: refreshToken ?? undefined,
+          expires_at: expiresAtStr ? parseInt(expiresAtStr) : undefined,
+        },
+      });
+
+      if (error) throw error;
+      if (!data || !data.ok) {
+        throw new Error(data?.error?.message || "spotify-data returned error");
       }
 
-      const headers = {
-        Authorization: `Bearer ${validToken}`,
-      };
-
-      // Fetch top tracks
-      const topTracksResponse = await fetch(
-        "https://api.spotify.com/v1/me/top/tracks?limit=20&time_range=medium_term",
-        { headers }
-      );
-
-      if (!topTracksResponse.ok) {
-        throw new Error(`Top tracks failed: ${topTracksResponse.status}`);
+      // Update tokens if refreshed
+      if (data.refreshed_tokens?.access_token) {
+        localStorage.setItem("spotify_access_token", data.refreshed_tokens.access_token);
+        setAccessToken(data.refreshed_tokens.access_token);
+      }
+      if (data.refreshed_tokens?.refresh_token) {
+        localStorage.setItem("spotify_refresh_token", data.refreshed_tokens.refresh_token);
+      }
+      if (data.refreshed_tokens?.expires_at) {
+        localStorage.setItem("spotify_expires_at", String(data.refreshed_tokens.expires_at));
       }
 
-      const topTracksData = await topTracksResponse.json();
-
-      // Fetch recently played
-      const recentResponse = await fetch(
-        "https://api.spotify.com/v1/me/player/recently-played?limit=50",
-        { headers }
-      );
-
-      if (!recentResponse.ok) {
-        throw new Error(`Recent tracks failed: ${recentResponse.status}`);
-      }
-
-      const recentTracksData = await recentResponse.json();
-
-      // Fetch top artists for genres
-      const topArtistsResponse = await fetch(
-        "https://api.spotify.com/v1/me/top/artists?limit=5&time_range=medium_term",
-        { headers }
-      );
-
-      if (!topArtistsResponse.ok) {
-        throw new Error(`Top artists failed: ${topArtistsResponse.status}`);
-      }
-
-      const topArtistsData = await topArtistsResponse.json();
-
-      // Fetch audio features for top tracks
-      const trackIds = topTracksData.items.map((track: any) => track.id).filter(Boolean);
-      console.log('Track IDs for audio features:', trackIds.length);
-      
-      let audioFeaturesData: any = { audio_features: [] };
-      
-      if (trackIds.length > 0) {
-        const idsCsv = trackIds.slice(0, 100).join(",");
-        const audioFeaturesResponse = await fetch(
-          `https://api.spotify.com/v1/audio-features?ids=${idsCsv}`,
-          { headers }
-        );
-
-        console.log('Audio features response status:', audioFeaturesResponse.status);
-        
-        if (audioFeaturesResponse.ok) {
-          audioFeaturesData = await audioFeaturesResponse.json();
-        } else {
-          console.warn('Audio features request failed:', audioFeaturesResponse.status);
-        }
-      }
-
-      // Compute vibe from audio features
-      const features = (audioFeaturesData?.audio_features || []).filter((f: any) => f !== null);
-      console.log('Audio features count:', features.length);
-      if (features.length > 0) {
-        const avgLiveness = features.reduce((sum: number, f: any) => sum + f.liveness, 0) / features.length;
-        const avgValence = features.reduce((sum: number, f: any) => sum + f.valence, 0) / features.length;
-        const avgTempo = features.reduce((sum: number, f: any) => sum + f.tempo, 0) / features.length;
-        console.log('Raw audio values:', { avgLiveness, avgValence, avgTempo });
-        const normalizedTempo = Math.max(0, Math.min(1, (avgTempo - 60) / 140));
-        const compositeVibe = (avgValence * 0.4) + (normalizedTempo * 0.4) + (avgLiveness * 0.2);
-        const amplifiedVibe = 0.5 + (compositeVibe - 0.5) * 1.8;
-        const clampedVibe = Math.max(0, Math.min(1, amplifiedVibe));
-        console.log('Final vibe energy:', clampedVibe * 100);
-        setEnergyLevel(clampedVibe * 100);
+      // Use server-computed analysis
+      if (data.analysis) {
+        console.log("Server-computed vibe energy:", data.analysis.vibeEnergy);
+        setEnergyLevel(data.analysis.vibeEnergy);
       }
 
       // Update UI data
-      setTopTracks((topTracksData?.items || []).slice(0, 5));
-      setRecentTracks(recentTracksData?.items || []);
+      setTopTracks((data.topTracks?.items || []).slice(0, 5));
+      setRecentTracks(data.recentTracks?.items || []);
 
       // Genres and artists from top artists
       const genres = new Set<string>();
-      (topArtistsData?.items || []).forEach((artist: any) => {
+      (data.topArtists?.items || []).forEach((artist: any) => {
         (artist.genres || []).forEach((genre: string) => genres.add(genre));
       });
       setTopGenres(Array.from(genres).slice(0, 5));
-      setTopArtists((topArtistsData?.items || []).slice(0, 5));
+      setTopArtists((data.topArtists?.items || []).slice(0, 5));
 
-      // Generate personality, mood board, and weekly summary after fetching data
+      // Generate personality, mood board, and weekly summary
       await Promise.all([
-        generatePersonality(topTracksData.items || [], recentTracksData.items || []),
-        generateMoodBoard(topTracksData.items || [], recentTracksData.items || []),
-        generateWeeklySummary(recentTracksData.items || []),
-        new Promise(resolve => setTimeout(resolve, 2000)) // Minimum loading time
+        generatePersonality(data.topTracks?.items || [], data.recentTracks?.items || []),
+        generateMoodBoard(data.topTracks?.items || [], data.recentTracks?.items || []),
+        generateWeeklySummary(data.recentTracks?.items || []),
+        new Promise(resolve => setTimeout(resolve, 2000))
       ]);
       
       setShowLoadingInterlude(false);
