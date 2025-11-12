@@ -135,6 +135,8 @@ const Index = () => {
 
       // Fetch audio features for energy calculation
       const trackIds = topTracksData.items.map((t: any) => t.id).join(",");
+      console.log('Fetching audio features for track IDs:', trackIds);
+      
       const audioFeaturesResponse = await fetch(
         `https://api.spotify.com/v1/audio-features?ids=${trackIds}`,
         {
@@ -142,29 +144,42 @@ const Index = () => {
         }
       );
 
+      console.log('Audio features response status:', audioFeaturesResponse.status);
+
       if (audioFeaturesResponse.ok) {
         const audioFeaturesData = await audioFeaturesResponse.json();
         const features = audioFeaturesData.audio_features.filter((f: any) => f !== null);
         
-        // Calculate vibe using liveness, valence, and tempo
-        // Liveness: presence of audience/live performance (0-1)
-        // Valence: musical positivity/brightness (0-1)
-        // Tempo: speed in BPM (normalize from typical 60-200 range to 0-1)
-        const avgLiveness = features.reduce((sum: number, f: any) => sum + f.liveness, 0) / features.length;
-        const avgValence = features.reduce((sum: number, f: any) => sum + f.valence, 0) / features.length;
-        const avgTempo = features.reduce((sum: number, f: any) => sum + f.tempo, 0) / features.length;
+        console.log('Audio features count:', features.length);
         
-        // Normalize tempo: 60 BPM = 0, 200 BPM = 1
-        const normalizedTempo = Math.max(0, Math.min(1, (avgTempo - 60) / 140));
-        
-        // Weighted composite: valence and tempo are most important for vibe
-        const compositeVibe = (avgValence * 0.4) + (normalizedTempo * 0.4) + (avgLiveness * 0.2);
-        
-        // Amplify differences from midpoint for more distinctive results
-        const amplifiedVibe = 0.5 + (compositeVibe - 0.5) * 1.8;
-        const clampedVibe = Math.max(0, Math.min(1, amplifiedVibe));
-        
-        setEnergyLevel(clampedVibe * 100);
+        if (features.length > 0) {
+          // Calculate vibe using liveness, valence, and tempo
+          const avgLiveness = features.reduce((sum: number, f: any) => sum + f.liveness, 0) / features.length;
+          const avgValence = features.reduce((sum: number, f: any) => sum + f.valence, 0) / features.length;
+          const avgTempo = features.reduce((sum: number, f: any) => sum + f.tempo, 0) / features.length;
+          
+          console.log('Raw audio values:', { avgLiveness, avgValence, avgTempo });
+          
+          // Normalize tempo: 60 BPM = 0, 200 BPM = 1
+          const normalizedTempo = Math.max(0, Math.min(1, (avgTempo - 60) / 140));
+          
+          // Weighted composite: valence and tempo are most important for vibe
+          const compositeVibe = (avgValence * 0.4) + (normalizedTempo * 0.4) + (avgLiveness * 0.2);
+          
+          console.log('Composite vibe before amplification:', compositeVibe);
+          
+          // Amplify differences from midpoint for more distinctive results
+          const amplifiedVibe = 0.5 + (compositeVibe - 0.5) * 1.8;
+          const clampedVibe = Math.max(0, Math.min(1, amplifiedVibe));
+          
+          console.log('Final vibe energy:', clampedVibe * 100);
+          
+          setEnergyLevel(clampedVibe * 100);
+        } else {
+          console.error('No valid audio features found');
+        }
+      } else {
+        console.error('Failed to fetch audio features:', await audioFeaturesResponse.text());
       }
 
       setTopTracks(topTracksData.items.slice(0, 5)); // Display only 5
