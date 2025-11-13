@@ -18,8 +18,8 @@ interface SnapshotsProps {
 }
 
 const Snapshots = ({ snapshots, onCommitSnapshot, onDeleteSnapshot, hasImages }: SnapshotsProps) => {
-  // Create array of 30 slots
-  const slots = Array.from({ length: 30 }, (_, i) => {
+  // Create array of 365 slots for daily snapshots
+  const slots = Array.from({ length: 365 }, (_, i) => {
     const snapshot = snapshots[i];
     return { index: i, snapshot };
   });
@@ -28,9 +28,9 @@ const Snapshots = ({ snapshots, onCommitSnapshot, onDeleteSnapshot, hasImages }:
     <Card className="p-6">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-2xl font-bold">Memory Snapshots</h2>
+          <h2 className="text-2xl font-bold">Daily Snapshots</h2>
           <p className="text-muted-foreground text-sm">
-            Capture your vibe each month
+            Capture your vibe each day
           </p>
         </div>
         <Button
@@ -43,7 +43,7 @@ const Snapshots = ({ snapshots, onCommitSnapshot, onDeleteSnapshot, hasImages }:
         </Button>
       </div>
       
-      <div className="grid grid-cols-5 gap-3">
+      <div className="grid grid-cols-10 gap-2 max-h-96 overflow-y-auto">
         {slots.map(({ index, snapshot }) => (
           <motion.div
             key={index}
@@ -80,9 +80,9 @@ const Snapshots = ({ snapshots, onCommitSnapshot, onDeleteSnapshot, hasImages }:
                 >
                   <X className="w-3 h-3 text-white" />
                 </button>
-                <div className="absolute bottom-0 left-0 right-0 bg-black/60 p-1">
-                  <p className="text-white text-[8px] text-center">
-                    {new Date(snapshot.date).toLocaleDateString('en-US', { month: 'short', year: '2-digit' })}
+                <div className="absolute bottom-0 left-0 right-0 bg-black/60 p-0.5">
+                  <p className="text-white text-[6px] text-center">
+                    {new Date(snapshot.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                   </p>
                 </div>
               </div>
