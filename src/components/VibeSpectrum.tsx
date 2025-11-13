@@ -2,68 +2,112 @@ import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 
 interface VibeSpectrumProps {
-  energyLevel: number; // 0-100
+  genreStats: Array<{ genre: string; count: number }>;
   onColorChange?: (color: string) => void;
 }
 
-export const VibeSpectrum = ({ energyLevel, onColorChange }: VibeSpectrumProps) => {
-  const [vibeColor, setVibeColor] = useState("");
+export const VibeSpectrum = ({ genreStats, onColorChange }: VibeSpectrumProps) => {
+  const [dominantColor, setDominantColor] = useState("hsl(240, 57%, 50%)");
+
+  // Take top 10 genres for the spectrum
+  const topGenres = genreStats.slice(0, 10);
+  const totalCount = topGenres.reduce((sum, g) => sum + g.count, 0);
 
   useEffect(() => {
-    // Map energy level (0-100) to color between indigo and orange
-    // Indigo: hsl(240, 57%, 50%) at 0
-    // Orange: hsl(25, 95%, 53%) at 100
-    const hue = 240 - (energyLevel / 100) * 215; // 240 (indigo) to 25 (orange)
-    const saturation = 57 + (energyLevel / 100) * 38; // 57% to 95%
-    const lightness = 50 + (energyLevel / 100) * 3; // 50% to 53%
-    
-    const color = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
-    setVibeColor(color);
-    onColorChange?.(color);
-  }, [energyLevel, onColorChange]);
+    // Generate a color based on the top genre
+    if (topGenres.length > 0) {
+      const hue = Math.abs(hashCode(topGenres[0].genre)) % 360;
+      const color = `hsl(${hue}, 70%, 55%)`;
+      setDominantColor(color);
+      onColorChange?.(color);
+    }
+  }, [genreStats, onColorChange, topGenres]);
 
-  const getVibeLabel = () => {
-    if (energyLevel < 25) return "Deeply Mellow";
-    if (energyLevel < 40) return "Chill Vibes";
-    if (energyLevel < 60) return "Balanced Energy";
-    if (energyLevel < 75) return "Upbeat Flow";
-    return "Maximum Energy";
+  // Simple hash function to get consistent colors for genres
+  const hashCode = (str: string) => {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    return hash;
   };
 
+  const getColorForGenre = (genre: string, index: number) => {
+    const hue = (Math.abs(hashCode(genre)) + index * 30) % 360;
+    return `hsl(${hue}, 70%, 60%)`;
+  };
+
+  if (topGenres.length === 0) {
+    return (
+      <div className="w-full max-w-4xl mx-auto mb-8">
+        <div className="text-center text-muted-foreground">
+          Connect to Spotify to see your genre spectrum
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="w-full max-w-2xl mx-auto mb-8">
-      <div className="space-y-3">
-        <div className="flex justify-between items-center text-sm">
-          <span className="text-muted-foreground">Mellow</span>
-          <motion.span
-            className="font-semibold text-lg"
-            style={{ color: vibeColor }}
+    <div className="w-full max-w-4xl mx-auto mb-8 px-4">
+      <div className="space-y-4">
+        <div className="text-center">
+          <motion.h2
+            className="text-2xl font-bold mb-2"
+            style={{ color: dominantColor }}
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
+            transition={{ delay: 0.2 }}
           >
-            {getVibeLabel()}
-          </motion.span>
-          <span className="text-muted-foreground">Energetic</span>
+            Your Genre Spectrum
+          </motion.h2>
+          <p className="text-sm text-muted-foreground">
+            Distribution across {genreStats.length} genres
+          </p>
         </div>
-        
-        {/* Spectrum bar */}
-        <div className="relative h-3 rounded-full overflow-hidden bg-gradient-to-r from-indigo-600 via-purple-500 via-pink-500 to-orange-500">
-          {/* Indicator */}
-          <motion.div
-            className="absolute top-1/2 -translate-y-1/2 w-1 h-6 bg-white rounded-full shadow-lg"
-            initial={{ left: "50%" }}
-            animate={{ left: `${energyLevel}%` }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-            style={{
-              boxShadow: `0 0 20px ${vibeColor}, 0 0 40px ${vibeColor}`,
-            }}
-          />
+
+        {/* Genre bars spectrum */}
+        <div className="space-y-2">
+          {topGenres.map((genre, index) => {
+            const percentage = (genre.count / totalCount) * 100;
+            const color = getColorForGenre(genre.genre, index);
+
+            return (
+              <motion.div
+                key={genre.genre}
+                className="space-y-1"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.05 }}
+              >
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-foreground font-medium truncate flex-1">
+                    {genre.genre}
+                  </span>
+                  <span className="text-muted-foreground ml-2">
+                    {genre.count} tracks
+                  </span>
+                </div>
+                <div className="relative h-2 rounded-full bg-muted/30 overflow-hidden">
+                  <motion.div
+                    className="absolute top-0 left-0 h-full rounded-full"
+                    style={{ backgroundColor: color }}
+                    initial={{ width: 0 }}
+                    animate={{ width: `${percentage}%` }}
+                    transition={{ duration: 0.8, delay: index * 0.05, ease: "easeOut" }}
+                  />
+                </div>
+              </motion.div>
+            );
+          })}
         </div>
-        
-        <div className="text-center text-xs text-muted-foreground/60">
-          Your average vibe energy: {energyLevel.toFixed(0)}%
-        </div>
+
+        {genreStats.length > 10 && (
+          <div className="text-center text-xs text-muted-foreground/60 pt-2">
+            + {genreStats.length - 10} more genres in your library
+          </div>
+        )}
       </div>
     </div>
   );

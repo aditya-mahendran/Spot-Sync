@@ -478,7 +478,7 @@ const Index = () => {
 
           {accessToken && (
             <VibeSpectrum 
-              energyLevel={energyLevel} 
+              genreStats={genreStats}
               onColorChange={setVibeColor}
             />
           )}
