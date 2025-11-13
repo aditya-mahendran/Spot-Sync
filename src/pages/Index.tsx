@@ -256,14 +256,6 @@ const Index = () => {
       if (data.analysis) {
         console.log("Server-computed vibe energy:", data.analysis.vibeEnergy);
         setEnergyLevel(data.analysis.vibeEnergy);
-        
-        // Warn if analysis is using defaults (no real audio features)
-        if (data.analysis.count === 0 || !data.audioFeatures?.audio_features?.length) {
-          console.warn("No audio features retrieved - using default analysis values");
-          toast.error("Unable to analyze your music deeply. Try disconnecting and reconnecting to Spotify with full permissions.", {
-            duration: 5000,
-          });
-        }
       }
 
       // Update UI data
