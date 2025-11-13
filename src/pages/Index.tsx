@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Music } from "lucide-react";
+import { Music, LogOut } from "lucide-react";
 import { ListeningTimeChart } from "@/components/ListeningTimeChart";
 import { MusicPersonality } from "@/components/MusicPersonality";
 import MoodBoard from "@/components/MoodBoard";
@@ -53,7 +53,35 @@ const Index = () => {
     }
   }, []);
 
+  const clearSpotifyData = () => {
+    // Clear all Spotify-related data
+    localStorage.removeItem("spotify_access_token");
+    localStorage.removeItem("spotify_refresh_token");
+    localStorage.removeItem("spotify_expires_at");
+    localStorage.removeItem("spotify_token_expiry");
+    
+    // Reset app state
+    setAccessToken(null);
+    setTopTracks([]);
+    setRecentTracks([]);
+    setPersonality("");
+    setMoodBoardImages([]);
+    setEnergyLevel(50);
+    setVibeColor("hsl(240, 57%, 50%)");
+    setTopGenres([]);
+    setTopArtists([]);
+    setGenreStats([]);
+    setAvgValence(0);
+    setWeeklyDescription("");
+    setWeeklyVibeWord("");
+    
+    console.log("Cleared all Spotify data and reset app state");
+  };
+
   const handleConnect = () => {
+    // Clear existing data first to force fresh authentication
+    clearSpotifyData();
+    
     // Replace with your Spotify Client ID from the dashboard
     const clientId = "9ec86b7567a34af28e84a6f72e7590a1";
     const redirectUri = `${window.location.origin}/`;
@@ -61,10 +89,11 @@ const Index = () => {
     const scopes = "user-top-read user-read-recently-played user-library-read user-read-playback-state";
 
     console.log("Spotify redirect URI:", redirectUri);
+    console.log("Requesting scopes:", scopes);
 
     const authUrl = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=code&redirect_uri=${encodeURIComponent(
       redirectUri,
-    )}&scope=${encodeURIComponent(scopes)}`;
+    )}&scope=${encodeURIComponent(scopes)}&show_dialog=true`;
 
     // Open popup window
     const popup = window.open(authUrl, "Spotify Login", "width=500,height=700,left=100,top=100");
@@ -78,6 +107,11 @@ const Index = () => {
         await exchangeCodeForToken(event.data.code);
       }
     });
+  };
+
+  const handleDisconnect = () => {
+    clearSpotifyData();
+    toast.success("Disconnected from Spotify");
   };
 
   const exchangeCodeForToken = async (code: string) => {
@@ -230,7 +264,9 @@ const Index = () => {
         // Warn if analysis is using defaults (no real audio features)
         if (data.analysis.count === 0 || !data.audioFeatures?.audio_features?.length) {
           console.warn("No audio features retrieved - using default analysis values");
-          toast.error("Unable to analyze your music deeply. You may need to reconnect to Spotify with full permissions.");
+          toast.error("Unable to analyze your music deeply. Try disconnecting and reconnecting to Spotify with full permissions.", {
+            duration: 5000,
+          });
         }
       }
 
@@ -463,6 +499,16 @@ const Index = () => {
           </div>
         ) : (
           <div className="space-y-8">
+            <div className="flex justify-end px-4">
+              <Button
+                onClick={handleDisconnect}
+                variant="outline"
+                className="border-border/50 hover:bg-destructive/10 hover:text-destructive hover:border-destructive"
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                Disconnect Spotify
+              </Button>
+            </div>
             <MusicPersonality 
               personality={personality} 
               isLoading={isGeneratingPersonality} 
