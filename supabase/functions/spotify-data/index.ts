@@ -291,6 +291,26 @@ serve(async (req) => {
         if (featuresResp.ok) {
           const data = await featuresResp.json();
           allFeatures.push(...(data.audio_features || []));
+        } else {
+          const errorText = await featuresResp.text();
+          console.error(`Audio features batch failed (${featuresResp.status}):`, errorText);
+          console.error(`First 3 IDs in batch: ${batch.slice(0, 3).join(", ")}`);
+          
+          // Try individual requests as fallback for first 20 tracks
+          console.log("Attempting individual audio feature requests for critical tracks...");
+          for (let j = 0; j < Math.min(batch.length, 20); j++) {
+            try {
+              const singleResp = await fetch(`https://api.spotify.com/v1/audio-features/${batch[j]}`, { headers });
+              if (singleResp.ok) {
+                const singleData = await singleResp.json();
+                allFeatures.push(singleData);
+              } else {
+                console.error(`Individual feature request failed for ${batch[j]}: ${singleResp.status}`);
+              }
+            } catch (e2) {
+              console.error(`Individual feature error for ${batch[j]}:`, e2);
+            }
+          }
         }
       } catch (e) {
         console.error(`Audio features batch ${Math.floor(i/100) + 1} error:`, e);
@@ -298,6 +318,11 @@ serve(async (req) => {
     }
 
     console.log("Total audio features retrieved:", allFeatures.length);
+    
+    if (allFeatures.length === 0) {
+      console.error("CRITICAL: No audio features retrieved - analysis will use defaults");
+      console.error("This will cause all users to see identical 'balanced' results");
+    }
 
     // Compute analysis server-side
     const analysis = computeAnalysis(topTracks.items || [], recentTracks.items || [], allFeatures);

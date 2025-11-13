@@ -57,7 +57,8 @@ const Index = () => {
     // Replace with your Spotify Client ID from the dashboard
     const clientId = "9ec86b7567a34af28e84a6f72e7590a1";
     const redirectUri = `${window.location.origin}/`;
-    const scopes = "user-top-read user-read-recently-played";
+    // Added all necessary scopes for comprehensive music data access
+    const scopes = "user-top-read user-read-recently-played user-library-read user-read-playback-state";
 
     console.log("Spotify redirect URI:", redirectUri);
 
@@ -225,6 +226,12 @@ const Index = () => {
         console.log("Server-computed vibe energy:", data.analysis.vibeEnergy);
         setEnergyLevel(data.analysis.vibeEnergy);
         setAvgValence(data.analysis.avgValence || 0);
+        
+        // Warn if analysis is using defaults (no real audio features)
+        if (data.analysis.count === 0 || !data.audioFeatures?.audio_features?.length) {
+          console.warn("No audio features retrieved - using default analysis values");
+          toast.error("Unable to analyze your music deeply. You may need to reconnect to Spotify with full permissions.");
+        }
       }
 
       // Update UI data
