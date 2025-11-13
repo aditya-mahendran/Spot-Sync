@@ -148,10 +148,6 @@ export const VibeSpectrum = ({ genreStats, onColorChange }: VibeSpectrumProps) =
           </div>
         </div>
 
-        {/* Legend */}
-        <div className="text-center text-xs text-muted-foreground/70">
-          Your music intensity • Hover bubbles for details
-        </div>
       </div>
     </div>
   );

@@ -1,7 +1,8 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Camera, X } from "lucide-react";
+import { Camera, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
+import { useState } from "react";
 
 interface Snapshot {
   id: string;
@@ -18,11 +19,30 @@ interface SnapshotsProps {
 }
 
 const Snapshots = ({ snapshots, onCommitSnapshot, onDeleteSnapshot, hasImages }: SnapshotsProps) => {
+  const SNAPSHOTS_PER_PAGE = 30; // 6x5 grid
+  const TOTAL_SNAPSHOTS = 365;
+  const totalSections = Math.ceil(TOTAL_SNAPSHOTS / SNAPSHOTS_PER_PAGE);
+  
+  const [currentSection, setCurrentSection] = useState(0);
+
   // Create array of 365 slots for daily snapshots
-  const slots = Array.from({ length: 365 }, (_, i) => {
+  const allSlots = Array.from({ length: TOTAL_SNAPSHOTS }, (_, i) => {
     const snapshot = snapshots[i];
     return { index: i, snapshot };
   });
+
+  // Get slots for current section
+  const startIndex = currentSection * SNAPSHOTS_PER_PAGE;
+  const endIndex = startIndex + SNAPSHOTS_PER_PAGE;
+  const currentSlots = allSlots.slice(startIndex, endIndex);
+
+  const goToPreviousSection = () => {
+    setCurrentSection(prev => Math.max(0, prev - 1));
+  };
+
+  const goToNextSection = () => {
+    setCurrentSection(prev => Math.min(totalSections - 1, prev + 1));
+  };
 
   return (
     <Card className="p-6">
@@ -43,13 +63,13 @@ const Snapshots = ({ snapshots, onCommitSnapshot, onDeleteSnapshot, hasImages }:
         </Button>
       </div>
       
-      <div className="grid grid-cols-10 gap-2 max-h-96 overflow-y-auto">
-        {slots.map(({ index, snapshot }) => (
+      <div className="grid grid-cols-6 gap-3 mb-4">
+        {currentSlots.map(({ index, snapshot }) => (
           <motion.div
             key={index}
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: index * 0.02 }}
+            transition={{ delay: (index % SNAPSHOTS_PER_PAGE) * 0.01 }}
             className="aspect-square relative border-2 border-dashed border-muted-foreground/30 rounded-lg overflow-hidden bg-background/50"
             style={{
               boxShadow: snapshot ? '0 0 10px rgba(var(--primary), 0.3)' : 'none',
@@ -81,7 +101,7 @@ const Snapshots = ({ snapshots, onCommitSnapshot, onDeleteSnapshot, hasImages }:
                   <X className="w-3 h-3 text-white" />
                 </button>
                 <div className="absolute bottom-0 left-0 right-0 bg-black/60 p-0.5">
-                  <p className="text-white text-[6px] text-center">
+                  <p className="text-white text-[8px] text-center">
                     {new Date(snapshot.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                   </p>
                 </div>
@@ -93,6 +113,29 @@ const Snapshots = ({ snapshots, onCommitSnapshot, onDeleteSnapshot, hasImages }:
             )}
           </motion.div>
         ))}
+      </div>
+
+      {/* Section navigation */}
+      <div className="flex items-center justify-center gap-4">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={goToPreviousSection}
+          disabled={currentSection === 0}
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <span className="text-sm text-muted-foreground">
+          Section {currentSection + 1} of {totalSections}
+        </span>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={goToNextSection}
+          disabled={currentSection === totalSections - 1}
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
       </div>
     </Card>
   );
