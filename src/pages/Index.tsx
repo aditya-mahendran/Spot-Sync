@@ -36,6 +36,7 @@ const Index = () => {
   const [topGenres, setTopGenres] = useState<string[]>([]);
   const [topArtists, setTopArtists] = useState<any[]>([]);
   const [genreStats, setGenreStats] = useState<Array<{ genre: string; count: number }>>([]);
+  const [avgValence, setAvgValence] = useState<number>(0);
 
   useEffect(() => {
     // Check if we have a token in localStorage
@@ -223,6 +224,7 @@ const Index = () => {
       if (data.analysis) {
         console.log("Server-computed vibe energy:", data.analysis.vibeEnergy);
         setEnergyLevel(data.analysis.vibeEnergy);
+        setAvgValence(data.analysis.avgValence || 0);
       }
 
       // Update UI data
@@ -477,7 +479,27 @@ const Index = () => {
               onDeleteSnapshot={handleDeleteSnapshot}
               hasImages={moodBoardImages.length > 0}
             />
-            {genreStats.length > 0 && <GenreChart genreStats={genreStats} />}
+            {genreStats.length > 0 && (
+              <>
+                <GenreChart genreStats={genreStats} />
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.4 }}
+                  className="w-full max-w-6xl mx-auto px-4 pb-8"
+                >
+                  <div className="bg-card/50 backdrop-blur-sm rounded-xl p-8 border border-border/50 text-center">
+                    <h3 className="text-lg text-muted-foreground mb-2">Average Valence</h3>
+                    <p className="text-5xl font-bold" style={{ color: 'hsl(142, 76%, 36%)' }}>
+                      {(avgValence * 100).toFixed(1)}%
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Musical positivity across {genreStats.reduce((sum, g) => sum + g.count, 0)} tracks
+                    </p>
+                  </div>
+                </motion.div>
+              </>
+            )}
           </div>
         )}
         </div>
