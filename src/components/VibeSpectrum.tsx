@@ -119,15 +119,15 @@ export const VibeSpectrum = ({ genreStats, onColorChange }: VibeSpectrumProps) =
     <div className="w-full max-w-6xl mx-auto mb-12 px-4">
       <div className="space-y-6">
         <div className="text-center">
-          <motion.h2
-            className="text-4xl font-bold mb-2"
+          <motion.p
+            className="text-lg font-medium italic mb-2 max-w-2xl mx-auto"
             style={{ color: dominantColor }}
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            {isGenerating ? "..." : vibeWord || "Your Vibe"}
-          </motion.h2>
+            {isGenerating ? "Reading your cosmic music destiny..." : vibeWord || "Your cosmic vibe awaits..."}
+          </motion.p>
         </div>
 
         {/* Spectrum bar */}

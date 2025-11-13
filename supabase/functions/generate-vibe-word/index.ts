@@ -26,13 +26,16 @@ serve(async (req) => {
                          intensity < 70 ? "energetic and upbeat" : 
                          "intense and high-energy";
 
-    const prompt = `You are analyzing someone's music taste. Their music intensity score is ${intensity.toFixed(0)}/100 (${intensityDesc}), and their top genres are: ${genreList}.
+    const prompt = `You are a cosmic fortune teller analyzing someone's music soul. Their music intensity score is ${intensity.toFixed(0)}/100 (${intensityDesc}), and their top genres are: ${genreList}.
 
-Generate ONE SINGLE WORD (only one word, nothing else) that perfectly captures their musical vibe. The word should be creative, evocative, and match their intensity level.
+Generate ONE LINE (maximum 12 words) that's part playful roast, part mystical fortune telling about their music taste. Channel the vibe of a cosmic costar - be witty, slightly cheeky, but also weirdly insightful about what their music says about their destiny/personality.
 
-Examples of good words: Ethereal, Turbulent, Radiant, Fierce, Tranquil, Electric, Mellow, Chaotic, Serene, Explosive
+Examples of the style:
+- "Your playlists scream 'main character energy' but your Spotify Wrapped says otherwise."
+- "The universe whispers: You're one breakup away from a full emo revival."
+- "Cosmic chaos energy detected. Your algorithm is begging for mercy."
 
-Return ONLY the word, nothing else.`;
+Return ONLY the one-liner, nothing else. Be creative and match their intensity level.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -49,7 +52,7 @@ Return ONLY the word, nothing else.`;
           }
         ],
         temperature: 0.9,
-        max_tokens: 10,
+        max_tokens: 50,
       }),
     });
 
