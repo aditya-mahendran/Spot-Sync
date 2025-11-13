@@ -60,11 +60,12 @@ export const VibeSpectrum = ({ genreStats, onColorChange }: VibeSpectrumProps) =
       // Generate AI descriptor
       generateVibeWord(avgIntensity, genresWithPosition.slice(0, 5).map(g => g.genre));
     }
-  }, [genreStats, genresWithPosition, onColorChange]);
+  }, [genreStats, onColorChange]);
 
   const generateVibeWord = async (intensity: number, topGenres: string[]) => {
     setIsGenerating(true);
     try {
+      console.log("Calling generate-vibe-word with:", { intensity, genres: topGenres });
       const { data, error } = await supabase.functions.invoke("generate-vibe-word", {
         body: { 
           intensity,
@@ -72,9 +73,19 @@ export const VibeSpectrum = ({ genreStats, onColorChange }: VibeSpectrumProps) =
         },
       });
 
+      console.log("Vibe word response:", { data, error });
       if (error) throw error;
       if (data?.word) {
+        console.log("Setting vibe word to:", data.word);
         setVibeWord(data.word);
+      } else {
+        console.warn("No word in response, using fallback");
+        // Fallback if no word returned
+        if (intensity < 20) setVibeWord("Serene");
+        else if (intensity < 40) setVibeWord("Mellow");
+        else if (intensity < 60) setVibeWord("Balanced");
+        else if (intensity < 80) setVibeWord("Energetic");
+        else setVibeWord("Intense");
       }
     } catch (error) {
       console.error("Error generating vibe word:", error);
@@ -122,40 +133,7 @@ export const VibeSpectrum = ({ genreStats, onColorChange }: VibeSpectrumProps) =
         {/* Spectrum bar */}
         <div className="relative">
           {/* Gradient bar */}
-          <div className="relative h-16 rounded-lg overflow-visible bg-gradient-to-r from-purple-600 via-yellow-500 to-red-600">
-            {/* Genre markers (no counts) */}
-            {genresWithPosition.slice(0, 15).map((genre, index) => {
-              const size = 24;
-              const color = getColorForIntensity(genre.intensity);
-              
-              return (
-                <motion.div
-                  key={genre.genre}
-                  className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 cursor-pointer group"
-                  style={{ left: `${genre.intensity}%` }}
-                  initial={{ opacity: 0, scale: 0 }}
-                  animate={{ opacity: 0.7, scale: 1 }}
-                  transition={{ delay: index * 0.05, duration: 0.4 }}
-                  whileHover={{ scale: 1.3, opacity: 1, zIndex: 50 }}
-                >
-                  <div
-                    className="rounded-full border-2 border-white shadow-lg"
-                    style={{ 
-                      width: size,
-                      height: size,
-                      backgroundColor: color,
-                    }}
-                  />
-                  
-                  {/* Tooltip on hover */}
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1 bg-background border border-border rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
-                    <div className="text-xs font-semibold">{genre.genre}</div>
-                    <div className="text-xs text-muted-foreground">{genre.count} tracks</div>
-                  </div>
-                </motion.div>
-              );
-            })}
-
+          <div className="relative h-16 rounded-lg overflow-hidden bg-gradient-to-r from-purple-600 via-yellow-500 to-red-600">
             {/* User position indicator line */}
             <motion.div
               className="absolute top-0 bottom-0 w-1 bg-white shadow-lg"
@@ -165,7 +143,7 @@ export const VibeSpectrum = ({ genreStats, onColorChange }: VibeSpectrumProps) =
               }}
               initial={{ opacity: 0, scaleY: 0 }}
               animate={{ opacity: 1, scaleY: 1 }}
-              transition={{ delay: 0.8, duration: 0.5 }}
+              transition={{ delay: 0.3, duration: 0.5 }}
             />
           </div>
         </div>
