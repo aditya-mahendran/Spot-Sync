@@ -12,6 +12,7 @@ import MusicPencilDrawings from "@/components/MusicPencilDrawings";
 import DrawingAnimation from "@/components/DrawingAnimation";
 import WeeklyListening from "@/components/WeeklyListening";
 import { SpotifyDottedLines } from "@/components/SpotifyDottedLines";
+import { GenreChart } from "@/components/GenreChart";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -34,6 +35,7 @@ const Index = () => {
   const [isGeneratingWeekly, setIsGeneratingWeekly] = useState(false);
   const [topGenres, setTopGenres] = useState<string[]>([]);
   const [topArtists, setTopArtists] = useState<any[]>([]);
+  const [genreStats, setGenreStats] = useState<Array<{ genre: string; count: number }>>([]);
 
   useEffect(() => {
     // Check if we have a token in localStorage
@@ -234,6 +236,11 @@ const Index = () => {
       });
       setTopGenres(Array.from(genres).slice(0, 5));
       setTopArtists((data.topArtists?.items || []).slice(0, 5));
+      
+      // Set genre statistics from server
+      if (data.genreStats) {
+        setGenreStats(data.genreStats);
+      }
 
       // Generate personality, mood board, and weekly summary
       await Promise.all([
@@ -470,6 +477,7 @@ const Index = () => {
               onDeleteSnapshot={handleDeleteSnapshot}
               hasImages={moodBoardImages.length > 0}
             />
+            {genreStats.length > 0 && <GenreChart genreStats={genreStats} />}
           </div>
         )}
         </div>

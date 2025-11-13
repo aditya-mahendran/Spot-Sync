@@ -226,15 +226,16 @@ serve(async (req) => {
       const t = await meResp.text();
       console.error("/v1/me failed:", meResp.status, t);
       return new Response(JSON.stringify({ 
-        ok: false,
-        me: null,
-        topTracks: { items: [] },
-        recentTracks: { items: [] },
-        topArtists: { items: [] },
-        audioFeatures: { audio_features: [] },
-        analysis: { vibeEnergy: 50, avgEnergy: 0.5, avgValence: 0.5, avgDanceability: 0.5, avgTempo: 0.5, count: 0 },
-        refreshed_tokens: null,
-        error: { status: meResp.status, code: "ME_FAILED", message: "Invalid Spotify token" }
+      ok: false,
+      me: null,
+      topTracks: { items: [] },
+      recentTracks: { items: [] },
+      topArtists: { items: [] },
+      audioFeatures: { audio_features: [] },
+      analysis: { vibeEnergy: 50, avgEnergy: 0.5, avgValence: 0.5, avgDanceability: 0.5, avgTempo: 0.5, count: 0 },
+      genreStats: [],
+      refreshed_tokens: null,
+      error: { status: meResp.status, code: "ME_FAILED", message: "Invalid Spotify token" }
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -301,6 +302,33 @@ serve(async (req) => {
     // Compute analysis server-side
     const analysis = computeAnalysis(topTracks.items || [], recentTracks.items || [], allFeatures);
 
+    // Aggregate genres from all artists
+    const genreCount = new Map<string, number>();
+    
+    // Add genres from top artists
+    (topArtists.items || []).forEach((artist: any) => {
+      (artist.genres || []).forEach((genre: string) => {
+        genreCount.set(genre, (genreCount.get(genre) || 0) + 1);
+      });
+    });
+    
+    // Add genres from track artists
+    [...(topTracks.items || []), ...(recentTracks.items || []).map((item: any) => item.track)].forEach((track: any) => {
+      if (!track) return;
+      (track.artists || []).forEach((artist: any) => {
+        (artist.genres || []).forEach((genre: string) => {
+          genreCount.set(genre, (genreCount.get(genre) || 0) + 1);
+        });
+      });
+    });
+    
+    // Convert to sorted array
+    const genreStats = Array.from(genreCount.entries())
+      .map(([genre, count]) => ({ genre, count }))
+      .sort((a, b) => b.count - a.count);
+    
+    console.log("Genre stats:", genreStats.length, "unique genres");
+
     return new Response(
       JSON.stringify({
         ok: true,
@@ -310,6 +338,7 @@ serve(async (req) => {
         topArtists,
         audioFeatures: { audio_features: allFeatures },
         analysis,
+        genreStats,
         refreshed_tokens: { access_token, refresh_token, expires_at },
         error: null
       }),
@@ -326,6 +355,7 @@ serve(async (req) => {
       topArtists: { items: [] },
       audioFeatures: { audio_features: [] },
       analysis: { vibeEnergy: 50, avgEnergy: 0.5, avgValence: 0.5, avgDanceability: 0.5, avgTempo: 0.5, count: 0 },
+      genreStats: [],
       refreshed_tokens: null,
       error: { status: 500, code: "SERVER_ERROR", message: msg }
     }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
