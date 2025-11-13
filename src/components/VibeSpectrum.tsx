@@ -132,19 +132,41 @@ export const VibeSpectrum = ({ genreStats, onColorChange }: VibeSpectrumProps) =
 
         {/* Spectrum bar */}
         <div className="relative">
-          {/* Gradient bar */}
-          <div className="relative h-16 rounded-lg overflow-hidden bg-gradient-to-r from-purple-600 via-yellow-500 to-red-600">
-            {/* User position indicator line */}
-            <motion.div
-              className="absolute top-0 bottom-0 w-1 bg-white shadow-lg"
-              style={{ 
-                left: `${userPosition}%`,
-                boxShadow: `0 0 20px ${dominantColor}, 0 0 40px ${dominantColor}`,
-              }}
-              initial={{ opacity: 0, scaleY: 0 }}
-              animate={{ opacity: 1, scaleY: 1 }}
-              transition={{ delay: 0.3, duration: 0.5 }}
-            />
+          <div className="flex items-center gap-4">
+            {/* Left label */}
+            <motion.span 
+              className="text-sm font-medium text-purple-400 whitespace-nowrap"
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.4 }}
+            >
+              Mellow
+            </motion.span>
+            
+            {/* Gradient bar */}
+            <div className="relative h-16 rounded-lg overflow-hidden bg-gradient-to-r from-purple-600 via-yellow-500 to-red-600 flex-1">
+              {/* User position indicator line */}
+              <motion.div
+                className="absolute top-0 bottom-0 w-1 bg-white shadow-lg"
+                style={{ 
+                  left: `${userPosition}%`,
+                  boxShadow: `0 0 20px ${dominantColor}, 0 0 40px ${dominantColor}`,
+                }}
+                initial={{ opacity: 0, scaleY: 0 }}
+                animate={{ opacity: 1, scaleY: 1 }}
+                transition={{ delay: 0.3, duration: 0.5 }}
+              />
+            </div>
+
+            {/* Right label */}
+            <motion.span 
+              className="text-sm font-medium text-red-400 whitespace-nowrap"
+              initial={{ opacity: 0, x: 10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.4 }}
+            >
+              Chaotic
+            </motion.span>
           </div>
         </div>
 
