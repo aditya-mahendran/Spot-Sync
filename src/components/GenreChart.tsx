@@ -46,6 +46,7 @@ export const GenreChart = ({ genreStats }: GenreChartProps) => {
             <YAxis
               tick={{ fill: "hsl(var(--foreground))", fontSize: 12 }}
               label={{ value: "Count", angle: -90, position: "insideLeft", fill: "hsl(var(--foreground))" }}
+              allowDecimals={false}
             />
             <Tooltip
               contentStyle={{
