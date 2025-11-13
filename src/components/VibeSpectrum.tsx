@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface VibeSpectrumProps {
   genreStats: Array<{ genre: string; count: number }>;
@@ -8,6 +9,9 @@ interface VibeSpectrumProps {
 
 export const VibeSpectrum = ({ genreStats, onColorChange }: VibeSpectrumProps) => {
   const [dominantColor, setDominantColor] = useState("hsl(240, 57%, 50%)");
+  const [userPosition, setUserPosition] = useState(50);
+  const [vibeWord, setVibeWord] = useState<string>("");
+  const [isGenerating, setIsGenerating] = useState(false);
 
   // Map genres to intensity (0 = lofi/chill, 100 = death metal/intense)
   const getGenreIntensity = (genre: string): number => {
@@ -40,18 +44,50 @@ export const VibeSpectrum = ({ genreStats, onColorChange }: VibeSpectrumProps) =
   })).sort((a, b) => a.intensity - b.intensity);
 
   useEffect(() => {
-    // Set color based on overall intensity
+    // Calculate user's average position
     if (genresWithPosition.length > 0) {
       const avgIntensity = genresWithPosition.reduce((sum, g) => sum + g.intensity * g.count, 0) / 
                           genresWithPosition.reduce((sum, g) => sum + g.count, 0);
+      
+      setUserPosition(avgIntensity);
       
       // Map intensity to color: lofi (purple/blue) to death metal (red)
       const hue = 280 - (avgIntensity * 2.8); // 280 (purple) to 0 (red)
       const color = `hsl(${hue}, 70%, 55%)`;
       setDominantColor(color);
       onColorChange?.(color);
+
+      // Generate AI descriptor
+      generateVibeWord(avgIntensity, genresWithPosition.slice(0, 5).map(g => g.genre));
     }
   }, [genreStats, genresWithPosition, onColorChange]);
+
+  const generateVibeWord = async (intensity: number, topGenres: string[]) => {
+    setIsGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-vibe-word", {
+        body: { 
+          intensity,
+          genres: topGenres
+        },
+      });
+
+      if (error) throw error;
+      if (data?.word) {
+        setVibeWord(data.word);
+      }
+    } catch (error) {
+      console.error("Error generating vibe word:", error);
+      // Fallback based on intensity
+      if (intensity < 20) setVibeWord("Serene");
+      else if (intensity < 40) setVibeWord("Mellow");
+      else if (intensity < 60) setVibeWord("Balanced");
+      else if (intensity < 80) setVibeWord("Energetic");
+      else setVibeWord("Intense");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const getColorForIntensity = (intensity: number) => {
     const hue = 280 - (intensity * 2.8); // 280 (purple) to 0 (red)
@@ -73,32 +109,23 @@ export const VibeSpectrum = ({ genreStats, onColorChange }: VibeSpectrumProps) =
       <div className="space-y-6">
         <div className="text-center">
           <motion.h2
-            className="text-2xl font-bold mb-2"
+            className="text-4xl font-bold mb-2"
             style={{ color: dominantColor }}
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            Your Music Intensity Spectrum
+            {isGenerating ? "..." : vibeWord || "Your Vibe"}
           </motion.h2>
-          <p className="text-sm text-muted-foreground">
-            From chill lofi to heavy metal
-          </p>
         </div>
 
         {/* Spectrum bar */}
         <div className="relative">
-          {/* Labels */}
-          <div className="flex justify-between items-center text-sm font-medium mb-3">
-            <span className="text-purple-400">Lofi / Chill</span>
-            <span className="text-red-400">Death Metal / Intense</span>
-          </div>
-
           {/* Gradient bar */}
-          <div className="relative h-16 rounded-lg overflow-hidden bg-gradient-to-r from-purple-600 via-yellow-500 to-red-600">
-            {/* Genre markers */}
+          <div className="relative h-16 rounded-lg overflow-visible bg-gradient-to-r from-purple-600 via-yellow-500 to-red-600">
+            {/* Genre markers (no counts) */}
             {genresWithPosition.slice(0, 15).map((genre, index) => {
-              const size = Math.min(Math.max(genre.count * 3, 30), 80);
+              const size = 24;
               const color = getColorForIntensity(genre.intensity);
               
               return (
@@ -107,22 +134,18 @@ export const VibeSpectrum = ({ genreStats, onColorChange }: VibeSpectrumProps) =
                   className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 cursor-pointer group"
                   style={{ left: `${genre.intensity}%` }}
                   initial={{ opacity: 0, scale: 0 }}
-                  animate={{ opacity: 0.9, scale: 1 }}
+                  animate={{ opacity: 0.7, scale: 1 }}
                   transition={{ delay: index * 0.05, duration: 0.4 }}
-                  whileHover={{ scale: 1.2, opacity: 1, zIndex: 50 }}
+                  whileHover={{ scale: 1.3, opacity: 1, zIndex: 50 }}
                 >
                   <div
-                    className="rounded-full border-2 border-white shadow-lg flex items-center justify-center"
+                    className="rounded-full border-2 border-white shadow-lg"
                     style={{ 
                       width: size,
                       height: size,
                       backgroundColor: color,
                     }}
-                  >
-                    <span className="text-white text-xs font-bold">
-                      {genre.count}
-                    </span>
-                  </div>
+                  />
                   
                   {/* Tooltip on hover */}
                   <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1 bg-background border border-border rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
@@ -132,21 +155,24 @@ export const VibeSpectrum = ({ genreStats, onColorChange }: VibeSpectrumProps) =
                 </motion.div>
               );
             })}
-          </div>
 
-          {/* Intensity scale */}
-          <div className="flex justify-between text-xs text-muted-foreground/60 mt-2">
-            <span>0</span>
-            <span>25</span>
-            <span>50</span>
-            <span>75</span>
-            <span>100</span>
+            {/* User position indicator line */}
+            <motion.div
+              className="absolute top-0 bottom-0 w-1 bg-white shadow-lg"
+              style={{ 
+                left: `${userPosition}%`,
+                boxShadow: `0 0 20px ${dominantColor}, 0 0 40px ${dominantColor}`,
+              }}
+              initial={{ opacity: 0, scaleY: 0 }}
+              animate={{ opacity: 1, scaleY: 1 }}
+              transition={{ delay: 0.8, duration: 0.5 }}
+            />
           </div>
         </div>
 
         {/* Legend */}
         <div className="text-center text-xs text-muted-foreground/70">
-          Bubble size represents track count • Hover to see details
+          Your music intensity • Hover bubbles for details
         </div>
       </div>
     </div>

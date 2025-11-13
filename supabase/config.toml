@@ -15,5 +15,8 @@ verify_jwt = false
 [functions.generate-instagram-caption]
 verify_jwt = false
 
+[functions.generate-vibe-word]
+verify_jwt = false
+
 [functions.spotify-data]
 verify_jwt = false
