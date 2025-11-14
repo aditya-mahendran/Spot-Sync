@@ -1,9 +1,16 @@
 import { serve } from "https://deno.land/std@0.220.0/http/server.ts";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+const tokensSchema = z.object({
+  access_token: z.string().min(1),
+  refresh_token: z.string().min(1),
+  expires_at: z.number().positive(),
+});
 
 type Tokens = {
   access_token?: string;
@@ -203,10 +210,19 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
+    const validationResult = tokensSchema.safeParse(body);
+    
+    if (!validationResult.success) {
+      return new Response(
+        JSON.stringify({ error: "Invalid input", details: validationResult.error.issues }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const inputTokens: Tokens = {
-      access_token: body.access_token,
-      refresh_token: body.refresh_token,
-      expires_at: body.expires_at,
+      access_token: validationResult.data.access_token,
+      refresh_token: validationResult.data.refresh_token,
+      expires_at: validationResult.data.expires_at,
     };
 
     // Validate/refresh token

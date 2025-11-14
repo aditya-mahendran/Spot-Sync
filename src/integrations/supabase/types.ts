@@ -14,7 +14,80 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      personas: {
+        Row: {
+          archetype: string
+          caption: string
+          created_at: string
+          id: string
+          listening_data: Json
+          public_slug: string | null
+          rationale: string | null
+          recommendations: Json
+          style: string | null
+          traits: Json
+          user_id: string | null
+        }
+        Insert: {
+          archetype: string
+          caption: string
+          created_at?: string
+          id?: string
+          listening_data?: Json
+          public_slug?: string | null
+          rationale?: string | null
+          recommendations?: Json
+          style?: string | null
+          traits?: Json
+          user_id?: string | null
+        }
+        Update: {
+          archetype?: string
+          caption?: string
+          created_at?: string
+          id?: string
+          listening_data?: Json
+          public_slug?: string | null
+          rationale?: string | null
+          recommendations?: Json
+          style?: string | null
+          traits?: Json
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "personas_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      users: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          email: string | null
+          id: string
+          spotify_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          spotify_id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          spotify_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
