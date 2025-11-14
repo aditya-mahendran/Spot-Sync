@@ -1,10 +1,25 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.220.0/http/server.ts";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+const trackSchema = z.object({
+  artists: z.array(z.object({
+    name: z.string(),
+    genres: z.array(z.string()).optional(),
+  })).min(1),
+});
+
+const requestSchema = z.object({
+  topTracks: z.array(trackSchema).min(1).max(50),
+  recentTracks: z.array(z.object({
+    played_at: z.string().optional(),
+  })).max(50),
+});
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -12,7 +27,17 @@ serve(async (req) => {
   }
 
   try {
-    const { topTracks, recentTracks } = await req.json();
+    const body = await req.json();
+    const validationResult = requestSchema.safeParse(body);
+    
+    if (!validationResult.success) {
+      return new Response(
+        JSON.stringify({ error: "Invalid input", details: validationResult.error.issues }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { topTracks, recentTracks } = validationResult.data;
     const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
 
     if (!lovableApiKey) {

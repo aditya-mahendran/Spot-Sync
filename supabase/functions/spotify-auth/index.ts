@@ -1,10 +1,19 @@
 import { serve } from "https://deno.land/std@0.220.0/http/server.ts";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
 };
+
+const requestSchema = z.object({
+  code: z.string().optional(),
+  redirectUri: z.string().url().optional(),
+  refreshToken: z.string().optional(),
+}).refine(data => data.code || data.refreshToken, {
+  message: "Either code or refreshToken must be provided"
+});
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -13,7 +22,17 @@ serve(async (req) => {
   }
 
   try {
-    const { code, redirectUri, refreshToken } = await req.json();
+    const requestBody = await req.json();
+    const validationResult = requestSchema.safeParse(requestBody);
+    
+    if (!validationResult.success) {
+      return new Response(
+        JSON.stringify({ error: "Invalid input", details: validationResult.error.issues }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { code, redirectUri, refreshToken } = validationResult.data;
 
     const clientId = Deno.env.get("SPOTIFY_CLIENT_ID");
     const clientSecret = Deno.env.get("SPOTIFY_CLIENT_SECRET");
@@ -22,23 +41,28 @@ serve(async (req) => {
       throw new Error("Spotify credentials not configured");
     }
 
-    let body: URLSearchParams;
+    let formBody: URLSearchParams;
     
     if (refreshToken) {
       // Refresh existing token
       console.log("Refreshing Spotify token");
-      body = new URLSearchParams({
+      formBody = new URLSearchParams({
         grant_type: "refresh_token",
         refresh_token: refreshToken,
       });
-    } else {
+    } else if (code && redirectUri) {
       // Exchange authorization code for access token
       console.log("Exchanging code for token");
-      body = new URLSearchParams({
+      formBody = new URLSearchParams({
         grant_type: "authorization_code",
         code: code,
         redirect_uri: redirectUri,
       });
+    } else {
+      return new Response(
+        JSON.stringify({ error: "Invalid request: code and redirectUri required for authorization" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     const tokenResponse = await fetch(
@@ -49,7 +73,7 @@ serve(async (req) => {
           "Content-Type": "application/x-www-form-urlencoded",
           Authorization: `Basic ${btoa(`${clientId}:${clientSecret}`)}`,
         },
-        body: body,
+        body: formBody,
       }
     );
 

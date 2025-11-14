@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.220.0/http/server.ts";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -6,13 +7,38 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+const recentTrackSchema = z.object({
+  track: z.object({
+    name: z.string(),
+    artists: z.array(z.object({
+      name: z.string(),
+    })).min(1),
+  }),
+  played_at: z.string(),
+});
+
+const requestSchema = z.object({
+  recentTracks: z.array(recentTrackSchema).min(1).max(50),
+  energyLevel: z.number().min(0).max(100),
+});
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { recentTracks, energyLevel } = await req.json();
+    const body = await req.json();
+    const validationResult = requestSchema.safeParse(body);
+    
+    if (!validationResult.success) {
+      return new Response(
+        JSON.stringify({ error: "Invalid input", details: validationResult.error.issues }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { recentTracks, energyLevel } = validationResult.data;
 
     if (!recentTracks || recentTracks.length === 0) {
       return new Response(
