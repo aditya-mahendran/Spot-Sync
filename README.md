@@ -1,73 +1,43 @@
-# Welcome to your Lovable project
+```markdown
+# Spot Sync
 
-## Project info
+Spot Sync is a small app that connects to Spotify and gives a simple view of your listening habits using your Spotify data.
 
-**URL**: https://lovable.dev/projects/762ddd06-dbb6-4b97-8a6a-9c6116c4ba61
+## Features
 
-## How can I edit this code?
+- Connects to your Spotify account
+- Pulls data such as top tracks, artists, and recent listening
+- Uses audio features like energy and valence from the Spotify API
+- Shows a clean, easy-to-read summary of your listening
 
-There are several ways of editing your application.
+## Why I built it
 
-**Use Lovable**
+I wanted to work with the Spotify Web API, handle an OAuth flow, and turn raw music data into something that feels more like a “persona” for how someone listens.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/762ddd06-dbb6-4b97-8a6a-9c6116c4ba61) and start prompting.
+## Getting started
 
-Changes made via Lovable will be committed automatically to this repo.
+1. Clone the repo:
 
-**Use your preferred IDE**
+```bash
+git clone https://github.com/Aditya-Mahendran/Spot-Sync.git
+cd Spot-Sync
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+2. Install dependencies:
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+bash
+Copy code
+npm install
 
-Follow these steps:
+3. Create a local environment file (for example .env or .env.local) with your own Spotify app credentials. The app expects values such as:
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+bash
+Copy code
+SPOTIFY_CLIENT_ID=your_client_id_here
+SPOTIFY_CLIENT_SECRET=your_client_secret_here
+SPOTIFY_REDIRECT_URI=http://localhost:3000/callback
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+4. Run the app:
 
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+bash
+Copy code
 npm run dev
-```
-
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/762ddd06-dbb6-4b97-8a6a-9c6116c4ba61) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
